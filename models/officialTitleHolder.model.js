@@ -1,0 +1,46 @@
+const mongoose = require('mongoose')
+
+const OfficialTitleHolderSchema = new mongoose.Schema(
+  {
+    proClassification: {
+      type: String,
+      required: true,
+    },
+    sport: {
+      type: String,
+      required: true,
+    },
+    ageClass: {
+      type: String,
+      required: true,
+    },
+    weightClass: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    date: {
+      type: Date,
+      required: true,
+    },
+    fighter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+  },
+  {
+    timestamps: true,
+  }
+)
+
+module.exports = mongoose.model(
+  'OfficialTitleHolder',
+  OfficialTitleHolderSchema
+)
