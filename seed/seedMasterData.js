@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const Master = require('../models/master.model')
 const topics = require('../master/topics')
+const proClassifications = require('../master/proClassifications')
 require('dotenv').config()
 
 const mongoURI = process.env.MONGO_URI
@@ -8,14 +9,14 @@ const mongoURI = process.env.MONGO_URI
 async function seed() {
   await mongoose.connect(mongoURI)
 
-  await Master.deleteMany({ type: 'topics' })
+  await Master.deleteMany({ type: 'weightClassesData' })
 
   await Master.create({
-    type: 'topics',
-    data: topics,
+    type: 'proClassifications',
+    data: proClassifications,
   })
 
-  console.log('Seeded topics data to MongoDB.')
+  console.log('Seeded Pro Classifications data to MongoDB.')
   process.exit()
 }
 
