@@ -1,11 +1,14 @@
 const mongoose = require('mongoose')
 const validator = require('validator')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 const FighterProfile = require('./fighterProfile.model')
 const TrainerProfile = require('./TrainerProfile.model')
 
 const userSchema = new mongoose.Schema(
   {
+    profilePhoto: {
+      type: String,
+    },
     firstName: {
       type: String,
       required: [true, 'First Name is required'],
@@ -29,12 +32,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['user', 'parent', 'fighter', 'trainer', 'promoter', 'superAdmin'],
       required: [true, 'Role is required'],
-      default: 'user',
     },
     gender: {
       type: String,
       enum: ['Male', 'Female', 'Other'],
-      required: [true, 'Gender is required'],
     },
     dateOfBirth: {
       type: Date,
@@ -79,7 +80,7 @@ const userSchema = new mongoose.Schema(
         message: 'Password must contain at least one number',
       },
     },
-    agreedToTerms: {
+    termsAgreed: {
       type: Boolean,
       required: [true, 'You must agree to the terms and conditions'],
     },

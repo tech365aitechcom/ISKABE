@@ -12,6 +12,11 @@ const contactSchema = new mongoose.Schema(
     email: { type: String, required: true },
     phone: { type: String },
     message: { type: String, required: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
   },
   { timestamps: true }
 )

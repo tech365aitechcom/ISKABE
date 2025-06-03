@@ -9,7 +9,6 @@ const trainerProfileSchema = new mongoose.Schema(
       unique: true,
     },
     // Personal Info
-    profilePhoto: String, // Image URL or file path
     height: Number,
     weight: Number,
     // Gym Info

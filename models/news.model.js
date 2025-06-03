@@ -39,10 +39,6 @@ const NewsPostSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-    },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -51,4 +47,4 @@ const NewsPostSchema = new Schema(
   { timestamps: true }
 )
 
-module.exports = mongoose.model('NewsPost', NewsPostSchema)
+module.exports = mongoose.model('News', NewsPostSchema)

@@ -25,7 +25,7 @@ exports.getMasterByType = async (req, res) => {
         .json({ message: `Master type '${type}' not found.` })
     }
 
-    res.json({ [type]: master.data })
+    res.json({ result: master.data })
   } catch (error) {
     res.status(500).json({ error: 'Error fetching master data.' })
   }

@@ -9,7 +9,6 @@ const fighterProfileSchema = new mongoose.Schema(
       unique: true,
     },
     nickname: String,
-    profilePhoto: String, // Image URL or file path
 
     height: String,
     weight: Number,

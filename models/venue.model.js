@@ -76,10 +76,15 @@ const venueSchema = new mongoose.Schema(
     },
     scheduledStatus: {
       type: String,
-      enum: ['Active', 'Inactive', 'Cancelled', 'Upcoming', 'Archived'],
+      // enum: ['Active', 'Inactive', 'Cancelled', 'Upcoming', 'Archived'],
     },
     statusChangeDate: {
       type: Date,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
   },
   {

@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const masterController = require('../controller/master.controller')
+const masterController = require('../controllers/master.controller')
 
 // GET /api/master
 router.get('/master', masterController.getAllMasterData)

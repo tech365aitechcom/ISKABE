@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 const validator = require('validator')
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcryptjs')
 
 const promoterSchema = new mongoose.Schema(
   {
@@ -99,7 +99,7 @@ const promoterSchema = new mongoose.Schema(
     sanctioningBody: {
       type: String,
       required: [true, 'Sanctioning Body is required'],
-      enum: ['IKF', 'WBC', 'USA Boxing'], // Add the full master list here
+      enum: ['ISKA', 'WBC', 'USA Boxing'], // Add the full master list here
     },
 
     // Documents

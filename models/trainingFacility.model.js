@@ -167,6 +167,11 @@ const trainingFacilitySchema = new mongoose.Schema(
       required: true,
       default: false, // false = Pending, true = Approved
     },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
   },
   {
     timestamps: true,
