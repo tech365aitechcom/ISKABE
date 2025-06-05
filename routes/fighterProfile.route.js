@@ -1,0 +1,9 @@
+const express = require('express')
+const router = express.Router()
+const fighterProfileController = require('../controllers/fighterProfile.controller')
+const { protect } = require('../middlewares/auth.middleware')
+
+// Update fighter profile route
+router.put('/:id', protect, fighterProfileController.updateFighterProfileById)
+
+module.exports = router

@@ -28,7 +28,7 @@ const trainerProfileSchema = new mongoose.Schema(
     affiliatedFighters: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Fighter',
+        ref: 'User',
       },
     ],
 

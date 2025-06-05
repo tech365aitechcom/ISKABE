@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcryptjs')
 const FighterProfile = require('./fighterProfile.model')
-const TrainerProfile = require('./TrainerProfile.model')
+const TrainerProfile = require('./trainerProfile.model')
 
 const userSchema = new mongoose.Schema(
   {
@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
     nickName: {
       type: String,
       match: [/^[A-Za-z]+$/, 'Nick Name must contain only letters'],
+      trim: true,
+    },
+    userName: {
+      type: String,
       trim: true,
     },
     suffix: {

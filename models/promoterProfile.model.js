@@ -33,10 +33,6 @@ const promoterProfileSchema = new mongoose.Schema(
       type: String,
       maxlength: 500,
     },
-    userName: {
-      type: String,
-      required: true,
-    },
     sanctioningBody: {
       type: String,
       required: true,

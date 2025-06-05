@@ -8,7 +8,6 @@ const fighterProfileSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-
     height: String,
     weight: Number,
     weightClass: String,
