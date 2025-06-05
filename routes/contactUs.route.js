@@ -6,6 +6,7 @@ const { protect } = require('../middlewares/auth.middleware')
 router.post('/', protect, contactUsController.createContact)
 router.get('/', contactUsController.getAllContacts)
 router.get('/:id', contactUsController.getContactById)
+router.put('/:id', contactUsController.updateContact)
 router.delete('/:id', contactUsController.deleteContact)
 
 module.exports = router

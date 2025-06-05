@@ -15,10 +15,24 @@ const userSchema = new mongoose.Schema(
       match: [/^[A-Za-z]+$/, 'First Name must contain only letters'],
       trim: true,
     },
+    middleName: {
+      type: String,
+      match: [/^[A-Za-z]+$/, 'Middle Name must contain only letters'],
+      trim: true,
+    },
     lastName: {
       type: String,
-      required: [true, 'Last Name is required'],
       match: [/^[A-Za-z]+$/, 'Last Name must contain only letters'],
+      trim: true,
+    },
+    nickName: {
+      type: String,
+      match: [/^[A-Za-z]+$/, 'Nick Name must contain only letters'],
+      trim: true,
+    },
+    suffix: {
+      type: String,
+      match: [/^[A-Za-z]+$/, 'Suffix must contain only letters'],
       trim: true,
     },
     email: {
@@ -39,7 +53,6 @@ const userSchema = new mongoose.Schema(
     },
     dateOfBirth: {
       type: Date,
-      required: [true, 'Date of Birth is required'],
       validate: {
         validator: function (dob) {
           const today = new Date()
@@ -57,6 +70,15 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     city: {
+      type: String,
+    },
+    street1: {
+      type: String,
+    },
+    street2: {
+      type: String,
+    },
+    postalCode: {
       type: String,
     },
     phoneNumber: {
@@ -95,6 +117,13 @@ const userSchema = new mongoose.Schema(
     communicationPreferences: {
       type: [String],
       default: [],
+    },
+    lastLogin: {
+      type: Date,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

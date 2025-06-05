@@ -131,7 +131,7 @@ exports.forgotPassword = async (req, res) => {
     return res.status(400).json({ errors: errors.array() })
   }
 
-  const { email } = req.body
+  const { email, redirectUrl } = req.body
 
   try {
     const user = await User.findOne({ email })
@@ -140,13 +140,12 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const resetToken = generateVerificationToken()
+
     user.resetPasswordToken = resetToken
     user.resetPasswordExpiry = Date.now() + config.resetTokenExpiry * 1000 // 1 hour
     await user.save()
 
-    const resetLink = `${req.protocol}://${req.get(
-      'host'
-    )}/auth/reset-password/${resetToken}`
+    const resetLink = `${redirectUrl}?token=${resetToken}`
     await emailService.sendForgotPasswordEmail(email, resetLink)
 
     res
@@ -167,7 +166,7 @@ exports.resetPassword = async (req, res) => {
   }
 
   const { newPassword, confirmNewPassword } = req.body
-  const { token } = req.params
+  const { token } = req.query
 
   try {
     const user = await User.findOne({
@@ -230,6 +229,7 @@ exports.verifyEmail = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword, confirmNewPassword } = req.body
+  const { id: userId } = req.user
 
   if (!currentPassword || !newPassword || !confirmNewPassword) {
     return res
@@ -259,7 +259,7 @@ exports.changePassword = async (req, res) => {
   }
 
   try {
-    const user = await User.findById(req.user.userId) // Assuming you're using JWT or some authentication middleware
+    const user = await User.findById(userId)
 
     const isMatch = await bcrypt.compare(currentPassword, user.password)
     if (!isMatch) {
@@ -283,7 +283,7 @@ exports.changePassword = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select(
-      '-password -resetPasswordToken -resetPasswordExpire'
+      '-password -resetPasswordToken -resetPasswordExpire -createdBy -__v -verificationToken -verificationTokenExpiry'
     )
 
     if (!user) {

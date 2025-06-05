@@ -91,10 +91,6 @@ const AboutUsSchema = new mongoose.Schema(
         message: 'Must be a valid semantic version (x.y.z)',
       },
     },
-    published: {
-      type: Boolean,
-      default: false,
-    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

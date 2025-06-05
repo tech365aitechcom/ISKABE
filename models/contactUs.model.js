@@ -12,6 +12,23 @@ const contactSchema = new mongoose.Schema(
     email: { type: String, required: true },
     phone: { type: String },
     message: { type: String, required: true },
+    state: {
+      type: String,
+      enum: ['New', 'In Progress', 'Closed'],
+      default: 'New',
+    },
+    responseDate: {
+      type: Date,
+    },
+    responseSent: {
+      type: String,
+      enum: ['Yes', 'No'],
+      default: 'No',
+    },
+    assignedAdmin: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

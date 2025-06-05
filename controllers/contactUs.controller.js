@@ -13,6 +13,7 @@ exports.createContact = async (req, res) => {
       data: contact,
     })
   } catch (err) {
+    console.log(err)
     res.status(500).json({ success: false, message: err.message })
   }
 }
@@ -46,10 +47,10 @@ exports.getAllContacts = async (req, res) => {
       data: {
         items: contacts,
         pagination: {
-          total,
-          page: parseInt(page),
-          limit: parseInt(limit),
+          totalItems: total,
+          currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),
+          pageSize: parseInt(limit),
         },
       },
     })
@@ -66,6 +67,22 @@ exports.getContactById = async (req, res) => {
         .status(404)
         .json({ success: false, message: 'Contact not found' })
     res.json({ success: true, data: contact })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+exports.updateContact = async (req, res) => {
+  try {
+    const contact = await Contact.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    })
+    if (!contact)
+      return res
+        .status(404)
+        .json({ success: false, message: 'Contact not found' })
+    res.json({ success: true, message: 'Contact updated successfully' })
   } catch (err) {
     res.status(500).json({ success: false, message: err.message })
   }

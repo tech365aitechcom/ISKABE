@@ -86,7 +86,7 @@ router.post(
 
 // Reset password route
 router.post(
-  '/reset-password/:token',
+  '/reset-password',
   [
     body('newPassword')
       .notEmpty()
