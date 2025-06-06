@@ -15,15 +15,40 @@ const uploadS3 = async (file) => {
       throw new Error('No file buffer provided')
     }
 
-    const resizedImageBuffer = await sharp(file.buffer)
-      .resize({ width: 800 }) // You can remove this if resizing isn't needed
-      .toBuffer()
+    const imageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/avif',
+      'image/tiff',
+    ]
+    const isImage = imageTypes.includes(file.mimetype)
+    const isPDF = file.mimetype === 'application/pdf'
+
+    if (!isImage && !isPDF) {
+      throw new Error(`Unsupported file type: ${file.mimetype}`)
+    }
+
+    let fileBuffer
+
+    if (isImage) {
+      // Resize image
+      try {
+        fileBuffer = await sharp(file.buffer).resize({ width: 800 }).toBuffer()
+      } catch (err) {
+        console.warn('Sharp failed, using original buffer:', err.message)
+        fileBuffer = file.buffer
+      }
+    } else {
+      // No processing needed for PDFs
+      fileBuffer = file.buffer
+    }
 
     const params = {
       Bucket: process.env.S3_BUCKET_NAME,
       ContentType: file.mimetype,
-      Key: file.originalname,
-      Body: resizedImageBuffer,
+      Key: file.originalname, // You can customize this to avoid overwrites
+      Body: fileBuffer,
     }
 
     return new Promise((resolve, reject) => {

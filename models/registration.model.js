@@ -15,7 +15,7 @@ const registrationSchema = new mongoose.Schema(
     dateOfBirth: { type: Date, required: true },
 
     // Contact Info
-    mobileNumber: { type: String, required: true },
+    phoneNumber: { type: String, required: true },
     email: { type: String, required: true },
 
     // Address
@@ -24,7 +24,7 @@ const registrationSchema = new mongoose.Schema(
     city: { type: String, required: true },
     state: { type: String, required: true },
     country: { type: String, required: true },
-    zipCode: { type: String, required: true },
+    postalCode: { type: String, required: true },
 
     // Trainer-specific
     fightersRepresented: { type: String }, // one per line (textarea)
@@ -60,22 +60,16 @@ const registrationSchema = new mongoose.Schema(
     trainerPhone: { type: String },
     trainerEmail: { type: String },
     confirmTrainerEmail: { type: String },
-    isUnder18: { type: Boolean },
+    isAdult: { type: Boolean },
 
     // Waiver
     legalDisclaimerAccepted: { type: Boolean },
     waiverSignature: { type: String },
 
     // Payment
-    paymentMethod: {
-      type: String,
-      enum: ['Credit Card', 'Cash'],
-      required: true,
-    },
-    cardInfo: {
-      cardNumber: String,
-      expiry: String,
-      cvv: String,
+    purchase: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Purchase',
     },
     cashCode: String,
     event: {
