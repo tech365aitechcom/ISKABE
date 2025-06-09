@@ -4,5 +4,6 @@ const registrationController = require('../controllers/registration.controller')
 const { protect } = require('../middlewares/auth.middleware')
 
 router.post('/', protect, registrationController.createRegistration)
+router.get('/', registrationController.getRegistrations)
 
 module.exports = router

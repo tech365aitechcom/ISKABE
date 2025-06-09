@@ -31,9 +31,16 @@ exports.createNews = async (req, res) => {
 
 exports.getAllNews = async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 10 } = req.query
+    const { category, search, isPublished, page = 1, limit = 10 } = req.query
     const filter = {}
     if (category) filter.category = category
+
+    if (isPublished === 'true') {
+      filter.status = 'Published'
+    } else if (isPublished === 'false') {
+      filter.status = 'Draft'
+    }
+
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },

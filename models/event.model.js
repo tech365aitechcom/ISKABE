@@ -34,7 +34,7 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       validate: {
         validator: function (v) {
-          return !v || v >= this.eventStartDate
+          return !v || v >= this.startDate
         },
         message: 'End date must be after start date',
       },
@@ -44,7 +44,7 @@ const eventSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: function (v) {
-          return v <= this.eventStartDate
+          return v <= this.startDate
         },
         message: 'Registration start must be before event start',
       },
@@ -54,7 +54,7 @@ const eventSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: function (v) {
-          return v <= this.eventStartDate
+          return v <= this.startDate
         },
         message: 'Deadline must be before event start',
       },
@@ -73,20 +73,15 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-
     venue: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Venue',
       required: true,
     },
-
-    promoterName: {
-      type: String,
+    promoter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PromoterProfile',
       required: true,
-    },
-    promoterPhone: {
-      type: String,
-      match: /^[0-9\-\+]{9,15}$/,
     },
     iskaRepName: String,
     iskaRepPhone: {
@@ -103,21 +98,13 @@ const eventSchema = new mongoose.Schema(
       type: String,
       maxlength: 1000,
     },
-    rulesInfoURL: {
+    rules: {
       type: String,
-      validate: {
-        validator: function (v) {
-          return !v || /^https?:\/\/.+/.test(v)
-        },
-        message: 'Must be a valid URL',
-      },
     },
 
     matchingMethod: {
       type: String,
       required: true,
-      enum: ['Final On-site', 'Pre-Matched'],
-      default: 'On-site',
     },
     externalURL: {
       type: String,
@@ -131,13 +118,13 @@ const eventSchema = new mongoose.Schema(
     ageCategories: [
       {
         type: String,
-        enum: ['Juniors', 'Seniors'],
+        // enum: ['Juniors', 'Seniors'],
       },
     ],
     weightClasses: [
       {
         type: String,
-        enum: ['Featherweight', 'Light Heavy'],
+        // enum: ['Featherweight', 'Light Heavy'],
       },
     ],
     sectioningBodyName: {
@@ -151,7 +138,7 @@ const eventSchema = new mongoose.Schema(
     sectioningBodyImage: {
       type: String,
     },
-    totalFightersRegistered: {
+    registeredParticipants: {
       type: Number,
       default: 0,
     },

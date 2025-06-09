@@ -2,7 +2,10 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 
 const trainerSchema = new mongoose.Schema({
-  existingTrainerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // for searchable dropdown (optional)
+  existingTrainerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TrainerProfile',
+  }, // for searchable dropdown (optional)
   name: { type: String, trim: true, maxlength: 100 }, // required if no existingTrainerId
   roleTitle: { type: String, trim: true, maxlength: 100 },
   email: {
@@ -20,7 +23,10 @@ const trainerSchema = new mongoose.Schema({
 })
 
 const fighterSchema = new mongoose.Schema({
-  existingFighterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // for searchable dropdown (optional)
+  existingFighterId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FighterProfile',
+  }, // for searchable dropdown (optional)
   name: { type: String, trim: true, maxlength: 100 }, // required if no existingFighterId
   gender: { type: String, enum: ['Male', 'Female', 'Other'] },
   age: {
@@ -52,15 +58,14 @@ const fighterSchema = new mongoose.Schema({
 
 const trainingFacilitySchema = new mongoose.Schema(
   {
-    facilityName: {
+    name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       minlength: 3,
       maxlength: 50,
     },
-    facilityLogoUrl: {
+    logo: {
       type: String,
       required: true,
     },
@@ -122,7 +127,7 @@ const trainingFacilitySchema = new mongoose.Schema(
         message: 'Invalid URL format',
       },
     },
-    imageGalleryUrls: {
+    imageGallery: {
       type: [String],
       validate: {
         validator: (arr) => arr.length <= 10,
@@ -130,7 +135,7 @@ const trainingFacilitySchema = new mongoose.Schema(
       },
       default: [],
     },
-    videoIntroductionUrl: {
+    videoIntroduction: {
       type: String,
       validate: {
         validator: (v) =>
@@ -162,10 +167,19 @@ const trainingFacilitySchema = new mongoose.Schema(
       required: true,
       default: 'Active',
     },
-    approvalStatus: {
+    isDraft: {
       type: Boolean,
+      default: false,
+    },
+    adminApproveStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected'],
       required: true,
-      default: false, // false = Pending, true = Approved
+      default: 'Pending',
+    },
+    isAdminApprovalRequired: {
+      type: Boolean,
+      default: false,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

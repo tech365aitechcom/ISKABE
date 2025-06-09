@@ -35,11 +35,9 @@ const trainerProfileSchema = new mongoose.Schema(
     // Emergency Info
     emergencyContactName: {
       type: String,
-      required: true,
     },
     emergencyContactNumber: {
       type: String,
-      required: true,
     },
 
     // Event Association

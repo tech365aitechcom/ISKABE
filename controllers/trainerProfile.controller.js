@@ -1,6 +1,18 @@
 const User = require('../models/user.model')
 const TrainerProfile = require('../models/trainerProfile.model')
 
+exports.getAllTrainerProfiles = async (req, res) => {
+  try {
+    const trainerProfiles = await TrainerProfile.find().populate(
+      'userId',
+      '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+    )
+    return res.status(200).json({ success: true, data: trainerProfiles })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
 exports.updateTrainerProfileById = async (req, res) => {
   try {
     const { id: userId } = req.user

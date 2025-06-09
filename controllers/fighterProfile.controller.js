@@ -1,6 +1,18 @@
 const FighterProfile = require('../models/fighterProfile.model')
 const User = require('../models/user.model')
 
+exports.getAllFighterProfiles = async (req, res) => {
+  try {
+    const fighterProfiles = await FighterProfile.find().populate(
+      'userId',
+      '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+    )
+    return res.status(200).json({ success: true, data: fighterProfiles })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
 exports.updateFighterProfileById = async (req, res) => {
   try {
     const { id: userId } = req.user

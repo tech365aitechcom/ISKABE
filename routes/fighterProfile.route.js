@@ -3,6 +3,9 @@ const router = express.Router()
 const fighterProfileController = require('../controllers/fighterProfile.controller')
 const { protect } = require('../middlewares/auth.middleware')
 
+// Get fighter profile route
+router.get('/', fighterProfileController.getAllFighterProfiles)
+
 // Update fighter profile route
 router.put('/:id', protect, fighterProfileController.updateFighterProfileById)
 

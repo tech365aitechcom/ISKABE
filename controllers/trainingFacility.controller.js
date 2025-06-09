@@ -18,21 +18,42 @@ exports.createTrainingFacility = async (req, res) => {
 
 exports.getAllFacilities = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, martialArtsStyle } = req.query
+    const { id: userId } = req.user
+
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      search,
+      country,
+      state,
+      city,
+      facilityStatus,
+      approvalStatus,
+      martialArtsStyle,
+    } = req.query
 
     const filter = {}
-
+    if (country) filter.country = country
+    if (state) filter.state = state
+    if (city) filter.city = city
+    if (facilityStatus) filter.facilityStatus = facilityStatus
+    if (approvalStatus) filter.adminApproveStatus = approvalStatus
     if (search) {
-      filter.$or = [
-        { facilityName: { $regex: search, $options: 'i' } },
-        { city: { $regex: search, $options: 'i' } },
-        { state: { $regex: search, $options: 'i' } },
-        { country: { $regex: search, $options: 'i' } },
-      ]
+      filter.$or = [{ name: { $regex: search, $options: 'i' } }]
     }
 
     if (martialArtsStyle) {
       filter.martialArtsStyles = { $in: [martialArtsStyle] }
+    }
+
+    if (status == 'adminApproved') {
+      filter.isAdminApprovalRequired = true
+    } else if (status == 'adminApprovedAndUserDraft') {
+      filter.$or = [
+        { adminApproveStatus: 'Approved' },
+        { isDraft: true, createdBy: userId },
+      ]
     }
 
     const total = await TrainingFacility.countDocuments(filter)
@@ -51,7 +72,7 @@ exports.getAllFacilities = async (req, res) => {
       data: {
         items: facilities,
         pagination: {
-          total,
+          totalItems: total,
           page: parseInt(page),
           limit: parseInt(limit),
           totalPages: Math.ceil(total / limit),
@@ -66,10 +87,20 @@ exports.getAllFacilities = async (req, res) => {
 exports.getFacilityById = async (req, res) => {
   try {
     const facility = await TrainingFacility.findById(req.params.id)
+      .populate({
+        path: 'trainers.existingTrainerId',
+        populate: { path: 'userId' },
+      })
+      .populate({
+        path: 'fighters.existingFighterId',
+        populate: { path: 'userId' },
+      })
+
     if (!facility) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Training facility not found' })
+      return res.status(404).json({
+        success: false,
+        message: 'Training facility not found',
+      })
     }
 
     res.json({ success: true, data: facility })
