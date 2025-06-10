@@ -55,6 +55,7 @@ exports.createPromoter = async (req, res) => {
       accountStatus,
       assignRole,
       adminNotes,
+      redirectUrl,
     } = req.body
 
     const { firstName, middleName, lastName } = splitFullName(name)
@@ -101,11 +102,12 @@ exports.createPromoter = async (req, res) => {
     await promoter.save()
 
     // Send verification email
-    const verificationLink = `http://localhost:3000/verify-email?token=${verificationToken}&email=${email}`
+    const verificationLink = `${redirectUrl}?token=${verificationToken}&email=${email}`
     await emailService.sendVerificationEmail(email, verificationLink)
 
     res.status(201).json({
-      message: 'Promoter and User created successfully',
+      message:
+        'Promoter created successfully! Please check registered email for verification.',
       user,
       promoter,
     })

@@ -4,6 +4,7 @@ module.exports = [
     sports: [
       {
         label: 'Boxing (Male)',
+        ageClass: ['Boys', 'Men', 'Senior Men'],
         weightClass: [
           'Junior Pinweight (100.1–104)',
           'Junior Light Middleweight (153.1–159)',
@@ -18,6 +19,7 @@ module.exports = [
       },
       {
         label: 'Boxing (Female)',
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
       {
         label: 'Kickboxing (Male)',
@@ -61,6 +63,13 @@ module.exports = [
           'Adult Super Heavyweight (235.1–999)',
           'Senior Light Middleweight (153.1–159)',
         ],
+        discipline: [
+          'International Rules',
+          'IKF Unified Rules',
+          'Full Contact - American',
+          'Freestyle',
+        ],
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Kickboxing (Female)',
@@ -91,6 +100,13 @@ module.exports = [
           'Adult Middleweight (159.1–165)',
           'Adult Cruiserweight (172.1–185)',
         ],
+        discipline: [
+          'International Rules',
+          'IKF Unified Rules',
+          'Full Contact - American',
+          'Freestyle',
+        ],
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
       {
         label: 'Muay Thai (Male)',
@@ -140,6 +156,8 @@ module.exports = [
           'Senior Light Welterweight (137.1–142)',
           'Senior Light Cruiserweight (179.1–186)',
         ],
+        discipline: ['Modified', 'Full Rules'],
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Muay Thai (Female)',
@@ -175,6 +193,8 @@ module.exports = [
           'Adult Light Middleweight (153.1–159)',
           'Senior Featherweight (122.1–127)',
         ],
+        discipline: ['Modified', 'Full Rules'],
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
       {
         label: 'Point Sparring (Male)',
@@ -237,6 +257,14 @@ module.exports = [
           'Senior Heavyweight (215.1–230)',
           'Senior Super Heavyweight (230.1–999)',
         ],
+        discipline: [
+          'Unified Rules',
+          'Point Boxing',
+          'Modified Muay Thai',
+          'MMA',
+          'International Rules',
+        ],
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Point Sparring (Female)',
@@ -285,6 +313,14 @@ module.exports = [
           'Senior Super Cruiserweight (200.1–215)',
           'Senior Super Heavyweight (230.999)',
         ],
+        discipline: [
+          'Unified Rules',
+          'Point Boxing',
+          'Modified Muay Thai',
+          'MMA',
+          'International Rules',
+        ],
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
     ],
   },
@@ -293,9 +329,11 @@ module.exports = [
     sports: [
       {
         label: 'Boxing (Male)',
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Boxing (Female)',
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
       {
         label: 'Kickboxing (Male)',
@@ -307,9 +345,11 @@ module.exports = [
           'Adult Super Cruiserweight (195.1–215)',
           'Adult Super Heavyweight (235.1–999)',
         ],
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Kickboxing (Female)',
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
       {
         label: 'Muay Thai (Male)',
@@ -320,9 +360,11 @@ module.exports = [
           'Adult Light Cruiserweight (179.1–186)',
           'Adult Super Cruiserweight (195.1–215)',
         ],
+        ageClass: ['Boys', 'Men', 'Senior Men'],
       },
       {
         label: 'Muay Thai (Female)',
+        ageClass: ['Girls', 'Women', 'Senior Women'],
       },
     ],
   },

@@ -85,6 +85,7 @@ const userSchema = new mongoose.Schema(
     postalCode: {
       type: String,
     },
+
     phoneNumber: {
       type: String,
       required: [true, 'Phone Number is required'],
@@ -94,6 +95,18 @@ const userSchema = new mongoose.Schema(
         },
         message: 'Please enter a valid phone number',
       },
+    },
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    about: {
+      type: String,
+      maxlength: [500, 'About Us must be max 500 characters'],
+    },
+    adminNotes: {
+      type: String,
+      maxlength: [500, 'Notes must be max 500 characters'],
     },
     password: {
       type: String,

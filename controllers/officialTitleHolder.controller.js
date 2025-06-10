@@ -58,10 +58,14 @@ exports.getAllOfficialTitleHolders = async (req, res) => {
         'createdBy',
         '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
       )
-      .populate(
-        'fighter',
-        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
-      )
+      .populate({
+        path: 'fighter',
+        populate: {
+          path: 'userId',
+          select:
+            '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v',
+        },
+      })
       .sort({ createdAt: -1 })
 
     res.json({

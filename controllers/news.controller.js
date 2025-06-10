@@ -89,7 +89,11 @@ exports.getNewsById = async (req, res) => {
     if (!newsPost) {
       return res.status(404).json({ error: 'News post not found' })
     }
-    res.json({ data: newsPost })
+    res.json({
+      success: true,
+      message: 'News post fetched successfully',
+      data: newsPost,
+    })
   } catch (error) {
     res.status(500).json({ error: 'Error fetching news post' })
   }
@@ -118,7 +122,10 @@ exports.deleteNews = async (req, res) => {
     if (!newsPost) {
       return res.status(404).json({ error: 'News post not found' })
     }
-    res.json({ message: 'News post deleted successfully' })
+    res.json({
+      success: true,
+      message: 'News post deleted successfully',
+    })
   } catch (error) {
     res.status(500).json({ error: 'Error deleting news post' })
   }

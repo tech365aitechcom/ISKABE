@@ -93,6 +93,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email }).select(
       '-createdAt -updatedAt -__v -verificationToken -verificationTokenExpiry -resetPasswordToken -resetPasswordExpiry'
     )
+
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' })
     }
@@ -107,24 +108,26 @@ exports.login = async (req, res) => {
         .status(403)
         .json({ message: 'Account not verified. Please check your email.' })
     }
-    const userObj = user.toObject() // or use .lean() in the query
+
+    // Update lastLogin timestamp
+    user.lastLogin = new Date()
+    await user.save()
+
+    const userObj = user.toObject()
     delete userObj.password
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
       config.jwtSecret,
-      {
-        expiresIn: config.jwtExpiresIn,
-      }
+      { expiresIn: config.jwtExpiresIn }
     )
 
-    res.status(200).json({ message: 'Login successful', token, user: userObj }) // Send token or set as cookie
+    res.status(200).json({ message: 'Login successful', token, user: userObj })
   } catch (error) {
     console.error('Login error:', error)
     res.status(500).json({ message: 'Something went wrong during login' })
   }
 }
-
 exports.forgotPassword = async (req, res) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {

@@ -61,7 +61,11 @@ const registrationSchema = new mongoose.Schema(
     trainerEmail: { type: String },
     confirmTrainerEmail: { type: String },
     isAdult: { type: Boolean },
-
+    status: {
+      type: String,
+      enum: ['Pending', 'Rejected', 'Verified'],
+      default: 'Pending',
+    },
     // Waiver
     legalDisclaimerAccepted: { type: Boolean },
     waiverSignature: { type: String },

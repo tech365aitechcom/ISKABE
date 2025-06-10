@@ -18,7 +18,7 @@ const OfficialTitleHolderSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    name: {
+    title: {
       type: String,
       required: true,
     },
@@ -28,7 +28,7 @@ const OfficialTitleHolderSchema = new mongoose.Schema(
     },
     fighter: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'FighterProfile',
     },
     notes: {
       type: String,

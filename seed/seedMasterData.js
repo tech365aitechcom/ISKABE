@@ -11,15 +11,15 @@ const mongoURI = process.env.MONGO_URI
 async function seed() {
   await mongoose.connect(mongoURI)
 
-  await Master.deleteMany({ type: 'newsCategories' })
+  await Master.deleteMany({ type: 'proClassifications' })
 
-  const dataWithIds = newsCategory.map((data) => ({
+  const dataWithIds = proClassifications.map((data) => ({
     _id: new mongoose.Types.ObjectId(),
     ...data,
   }))
 
   await Master.create({
-    type: 'newsCategories',
+    type: 'proClassifications',
     data: dataWithIds,
   })
 
