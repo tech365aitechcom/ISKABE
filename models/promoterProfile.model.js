@@ -49,6 +49,15 @@ const promoterProfileSchema = new mongoose.Schema(
       },
     },
 
+    contactPersonName: {
+      type: String,
+      required: true,
+    },
+
+    alternatePhoneNumber: {
+      type: String,
+    },
+
     accountStatus: {
       type: String,
       required: true,

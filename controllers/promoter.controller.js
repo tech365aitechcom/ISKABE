@@ -1,6 +1,6 @@
 const { roles } = require('../constant')
 const promoterProfileModel = require('../models/promoterProfile.model')
-const userModel = require('../models/user.model')
+const User = require('../models/user.model')
 const emailService = require('../services/email.service')
 const crypto = require('crypto')
 
@@ -32,6 +32,7 @@ exports.createPromoter = async (req, res) => {
 
     const {
       name,
+      userName,
       email,
       phoneNumber,
       country,
@@ -45,11 +46,11 @@ exports.createPromoter = async (req, res) => {
       profilePhoto,
 
       // Promoter-specific
+      contactPersonName,
       alternatePhoneNumber,
       abbreviation,
       websiteURL,
       aboutUs,
-      userName,
       sanctioningBody,
       licenseCertificate,
       accountStatus,
@@ -63,10 +64,11 @@ exports.createPromoter = async (req, res) => {
     const verificationToken = generateVerificationToken()
     const verificationTokenExpiry = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
     // Create user
-    const user = await userModel.create({
+    const user = await User.create({
       firstName,
       middleName,
       lastName,
+      userName,
       email,
       phoneNumber,
       country,
@@ -86,11 +88,11 @@ exports.createPromoter = async (req, res) => {
     // Create promoter profile
     const promoter = new promoterProfileModel({
       userId: user._id,
+      contactPersonName,
       alternatePhoneNumber,
       abbreviation,
       websiteURL,
       aboutUs,
-      userName,
       sanctioningBody,
       licenseCertificate,
       accountStatus,
@@ -198,5 +200,124 @@ exports.getAllPromoterProfile = async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Error fetching promoter' })
+  }
+}
+
+exports.getPromoterProfileById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const promoter = await promoterProfileModel
+      .findById(id)
+      .populate(
+        'userId',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
+    if (!promoter) {
+      return res.status(404).json({ error: 'Promoter not found' })
+    }
+    res.json({
+      success: true,
+      message: 'Promoter fetched successfully',
+      data: promoter,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error fetching promoter' })
+  }
+}
+
+exports.updatePromoterProfile = async (req, res) => {
+  try {
+    const { id } = req.params
+    const payload = req.body
+
+    const userFields = [
+      'name',
+      'userName',
+      'email',
+      'phoneNumber',
+      'country',
+      'state',
+      'city',
+      'street1',
+      'street2',
+      'postalCode',
+      'password',
+      'profilePhoto',
+    ]
+
+    const promoterFields = [
+      'contactPersonName',
+      'alternatePhoneNumber',
+      'abbreviation',
+      'websiteURL',
+      'aboutUs',
+      'sanctioningBody',
+      'licenseCertificate',
+      'accountStatus',
+      'assignRole',
+      'adminNotes',
+    ]
+
+    const userUpdates = {}
+    const promoterUpdates = {}
+
+    for (const key in payload) {
+      if (userFields.includes(key)) {
+        userUpdates[key] = payload[key]
+      } else if (promoterFields.includes(key)) {
+        promoterUpdates[key] = payload[key]
+      }
+    }
+
+    const promoter = await promoterProfileModel.findById(id)
+    if (!promoter) {
+      return res.status(404).json({ error: 'Promoter not found' })
+    }
+
+    const user = await User.findByIdAndUpdate(promoter.userId, userUpdates, {
+      new: true,
+      runValidators: true,
+    })
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+    const updatedPromoter = await promoterProfileModel.findOneAndUpdate(
+      promoterUpdates,
+      { new: true, runValidators: true }
+    )
+
+    res.json({
+      success: true,
+      message: 'Promoter updated successfully',
+      data: { user, updatedPromoter },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error updating promoter' })
+  }
+}
+
+exports.deletePromoterProfile = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Find the promoter profile by ID
+    const promoter = await promoterProfileModel.findById(id)
+
+    if (!promoter) {
+      return res.status(404).json({ error: 'Promoter not found' })
+    }
+
+    // Delete the associated user
+    await User.findByIdAndDelete(promoter.userId)
+
+    // Delete the promoter profile
+    await promoterProfileModel.findByIdAndDelete(id)
+
+    res.json({ message: 'Promoter deleted successfully' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error deleting promoter and user' })
   }
 }

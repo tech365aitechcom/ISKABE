@@ -12,6 +12,18 @@ exports.createRule = async (req, res) => {
       })
     }
 
+    const { category, subTab, sortOrder } = req.body
+
+    // Check for existing rule with same category, subTab, and sortOrder
+    const existingRule = await Rules.findOne({ category, subTab, sortOrder })
+
+    if (existingRule) {
+      return res.status(400).json({
+        success: false,
+        message: `A rule already exists with sortOrder ${sortOrder} under category "${category}" and subTab "${subTab}". Please choose a different sortOrder.`,
+      })
+    }
+
     const rule = new Rules({
       ...req.body,
       createdBy: userId,
@@ -31,17 +43,10 @@ exports.createRule = async (req, res) => {
 
 exports.getAllRules = async (req, res) => {
   try {
-    const {
-      categoryTabName,
-      subTabName,
-      status,
-      search,
-      page = 1,
-      limit = 10,
-    } = req.query
+    const { category, subTab, status, search, page = 1, limit = 10 } = req.query
     const filter = {}
-    if (categoryTabName) filter.categoryTabName = categoryTabName
-    if (subTabName) filter.subTabName = subTabName
+    if (category) filter.category = category
+    if (subTab) filter.subTab = subTab
     if (status) filter.status = status
     if (search) {
       filter.$or = [{ ruleTitle: { $regex: search, $options: 'i' } }]

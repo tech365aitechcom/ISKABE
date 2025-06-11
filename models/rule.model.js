@@ -2,11 +2,11 @@ const mongoose = require('mongoose')
 
 const RuleSchema = new mongoose.Schema(
   {
-    categoryTabName: {
+    category: {
       type: String,
       required: true,
     },
-    subTabName: {
+    subTab: {
       type: String,
       required: true,
     },
@@ -25,7 +25,7 @@ const RuleSchema = new mongoose.Schema(
       required: true,
       maxlength: 2000,
     },
-    pdfUploadUrl: {
+    rule: {
       type: String,
       required: false,
       match: /\.pdf$/,
@@ -35,6 +35,8 @@ const RuleSchema = new mongoose.Schema(
       required: false,
       validate: {
         validator: function (v) {
+          // Allow empty string or undefined/null
+          if (!v) return true
           return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\//.test(
             v
           )
@@ -42,14 +44,15 @@ const RuleSchema = new mongoose.Schema(
         message: 'Video link must be from YouTube or Vimeo',
       },
     },
+
     sortOrder: {
       type: Number,
       required: true,
     },
     status: {
-      type: Boolean,
+      type: String,
       required: true,
-      default: true,
+      enum: ['Active', 'Inactive'],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
