@@ -98,6 +98,7 @@ exports.createPeople = async (req, res) => {
 
 exports.getAllPeople = async (req, res) => {
   try {
+    const { id: userId } = req.user
     const { id, name, gender, role, page = 1, limit = 10 } = req.query
 
     const filter = {}
@@ -127,6 +128,14 @@ exports.getAllPeople = async (req, res) => {
 
     if (role) {
       filter.role = role
+    }
+
+    // Fetch the current user's role
+    const currentUser = await User.findById(userId).select('role')
+
+    if (currentUser?.role === 'superAdmin') {
+      // Exclude the current superAdmin user from the results
+      filter._id = { ...(filter._id || {}), $ne: userId }
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit)

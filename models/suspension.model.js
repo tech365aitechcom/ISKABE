@@ -2,16 +2,15 @@ const mongoose = require('mongoose')
 
 const suspensionSchema = new mongoose.Schema(
   {
-    userId: {
+    person: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
     },
 
     status: {
       type: String,
-      enum: ['Active', 'Inactive'],
+      enum: ['Active', 'Pending', 'Closed'],
       required: true,
     },
 
@@ -29,6 +28,7 @@ const suspensionSchema = new mongoose.Schema(
     sportingEventUID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
+      set: (v) => (v === '' ? null : v),
     },
 
     description: {
@@ -52,6 +52,11 @@ const suspensionSchema = new mongoose.Schema(
     indefinite: {
       type: Boolean,
       default: false,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
   },
   { timestamps: true }
