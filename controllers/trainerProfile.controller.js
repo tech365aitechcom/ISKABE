@@ -1,5 +1,5 @@
 const User = require('../models/user.model')
-const TrainerProfile = require('../models/trainerProfile.model')
+const TrainerProfile = require('../models/TrainerProfile.model')
 
 exports.getAllTrainerProfiles = async (req, res) => {
   try {

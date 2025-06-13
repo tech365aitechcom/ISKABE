@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcryptjs')
 const FighterProfile = require('./fighterProfile.model')
-const TrainerProfile = require('./trainerProfile.model')
+const TrainerProfile = require('./TrainerProfile.model')
 
 const userSchema = new mongoose.Schema(
   {
