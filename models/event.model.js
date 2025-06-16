@@ -64,14 +64,32 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
     rulesMeetingTime: {
-      type: Date,
+      type: String,
+      validate: {
+        validator: function (v) {
+          return !v || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v)
+        },
+        message: 'Time must be in HH:MM format',
+      },
     },
     spectatorDoorsOpenTime: {
-      type: Date,
+      type: String,
+      validate: {
+        validator: function (v) {
+          return !v || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v)
+        },
+        message: 'Time must be in HH:MM format',
+      },
     },
     fightStartTime: {
-      type: Date,
+      type: String,
       required: true,
+      validate: {
+        validator: function (v) {
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v)
+        },
+        message: 'Time must be in HH:MM format',
+      },
     },
     venue: {
       type: mongoose.Schema.Types.ObjectId,
@@ -118,13 +136,11 @@ const eventSchema = new mongoose.Schema(
     ageCategories: [
       {
         type: String,
-        // enum: ['Juniors', 'Seniors'],
       },
     ],
     weightClasses: [
       {
         type: String,
-        // enum: ['Featherweight', 'Light Heavy'],
       },
     ],
     sectioningBodyName: {
