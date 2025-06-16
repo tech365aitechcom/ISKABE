@@ -1,4 +1,5 @@
 const User = require('../models/user.model')
+const Suspension = require('../models/suspension.model')
 const jwt = require('jsonwebtoken')
 const { validationResult } = require('express-validator')
 const emailService = require('../services/email.service')
@@ -128,6 +129,7 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Something went wrong during login' })
   }
 }
+
 exports.forgotPassword = async (req, res) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
@@ -285,9 +287,29 @@ exports.changePassword = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select(
-      '-password -resetPasswordToken -resetPasswordExpire -createdBy -__v -verificationToken -verificationTokenExpiry'
-    )
+    const user = await User.findById(req.params.id)
+      .select(
+        '-password -resetPasswordToken -resetPasswordExpire -createdBy -__v -verificationToken -verificationTokenExpiry'
+      )
+      .populate([
+        {
+          path: 'fighterProfile trainerProfile',
+          populate: [
+            {
+              path: 'associatedEvents',
+              model: 'Event',
+            },
+            {
+              path: 'affiliatedFighters',
+              model: 'FighterProfile',
+              populate: {
+                path: 'userId',
+                model: 'User',
+              },
+            },
+          ],
+        },
+      ])
 
     if (!user) {
       return res.status(404).json({
@@ -296,10 +318,19 @@ exports.getUserById = async (req, res) => {
       })
     }
 
+    const suspension = await Suspension.findOne({ person: user._id })
+      .sort({ createdAt: -1 })
+      .populate('sportingEventUID')
+
+    const userWithSuspension = {
+      ...user.toObject(),
+      suspension,
+    }
+
     return res.status(200).json({
       success: true,
       message: 'User fetched successfully',
-      data: user,
+      data: userWithSuspension,
     })
   } catch (error) {
     console.error('Error fetching user:', error)

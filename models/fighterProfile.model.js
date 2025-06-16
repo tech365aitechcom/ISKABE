@@ -11,7 +11,6 @@ const fighterProfileSchema = new mongoose.Schema(
     height: String,
     weight: Number,
     weightClass: String,
-    location: String,
 
     instagram: String,
     youtube: String,
@@ -21,15 +20,16 @@ const fighterProfileSchema = new mongoose.Schema(
     bio: String,
     primaryGym: String,
     coachName: String,
-    affiliations: [String],
+    affiliations: String,
     trainingExperience: String,
+    trainingStyle: String,
     credentials: String,
 
     // Career
-    nationalRank: Number,
-    globalRank: Number,
-    awards: [String],
-    recordHighlights: [String],
+    nationalRank: String,
+    globalRank: String,
+    achievements: String,
+    recordHighlight: String,
 
     // Media
     imageGallery: [String], // URLs or paths

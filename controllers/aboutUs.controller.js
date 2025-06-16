@@ -50,6 +50,24 @@ exports.getAboutUs = async (req, res) => {
   }
 }
 
+exports.getFooterConfig = async (req, res) => {
+  try {
+    // Fetch only logo and menuItems fields
+    const data = await AboutUs.findOne()
+      .select(
+        'facebookURL instagramURL twitterURL termsConditionsPDF privacyPolicyPDF copyrightNoticePDF'
+      )
+      .lean()
+
+    res.json({
+      success: true,
+      data,
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
 exports.updateAboutUs = async (req, res) => {
   try {
     const updated = await AboutUs.findOneAndUpdate({}, req.body, { new: true })

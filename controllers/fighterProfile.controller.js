@@ -1,15 +1,113 @@
 const FighterProfile = require('../models/fighterProfile.model')
 const User = require('../models/user.model')
+const Suspension = require('../models/suspension.model')
 
 exports.getAllFighterProfiles = async (req, res) => {
   try {
-    const fighterProfiles = await FighterProfile.find().populate(
+    const {
+      country,
+      state,
+      city,
+      trainingStyle,
+      search,
+      page = 1,
+      limit = 10,
+    } = req.query
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const matchStage = {}
+
+    if (trainingStyle) matchStage.trainingStyle = trainingStyle
+    if (country) matchStage['user.country'] = country
+    if (state) matchStage['user.state'] = state
+    if (city) matchStage['user.city'] = city
+
+    if (search) {
+      matchStage.$or = [
+        { 'user.firstName': { $regex: search, $options: 'i' } },
+        { 'user.lastName': { $regex: search, $options: 'i' } },
+        { 'user.email': { $regex: search, $options: 'i' } },
+      ]
+    }
+
+    const aggregation = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+      {
+        $project: {
+          userId: 0, // exclude userId
+          'user.password': 0,
+          'user.verificationToken': 0,
+          'user.verificationTokenExpiry': 0,
+          'user.resetToken': 0,
+          'user.resetTokenExpiry': 0,
+          'user.__v': 0,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: parseInt(limit) }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ]
+
+    const results = await FighterProfile.aggregate(aggregation)
+
+    const fighterProfiles = results[0]?.data || []
+    const totalItems = results[0]?.totalCount[0]?.count || 0
+
+    return res.status(200).json({
+      success: true,
+      message: 'Fighter list fetched',
+      data: {
+        items: fighterProfiles,
+        pagination: {
+          totalItems,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalItems / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+exports.getFighterProfileById = async (req, res) => {
+  try {
+    const fighter = await FighterProfile.findById(req.params.id).populate(
       'userId',
       '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
     )
-    return res.status(200).json({ success: true, data: fighterProfiles })
+    if (!fighter) {
+      return res.status(404).json({ error: 'Fighter not found' })
+    }
+
+    const suspension = await Suspension.findOne({
+      person: fighter.userId._id,
+    })
+      .sort({ createdAt: -1 })
+      .populate('sportingEventUID')
+    console.log(fighter.userId._id)
+
+    res.json({
+      success: true,
+      message: 'Fighter fetched successfully',
+      data: { ...fighter.toObject(), suspension },
+    })
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message })
+    res.status(500).json({ error: 'Error fetching fighter' })
   }
 }
 
@@ -21,7 +119,8 @@ exports.updateFighterProfileById = async (req, res) => {
 
     // Define model-specific fields
     const userFields = [
-      'fullName',
+      'firstName',
+      'lastName',
       'nickName',
       'userName',
       'profilePhoto',
@@ -29,27 +128,30 @@ exports.updateFighterProfileById = async (req, res) => {
       'dateOfBirth',
       'phoneNumber',
       'email',
+      'country',
+      'state',
+      'city',
     ]
 
     const fighterFields = [
       'height',
       'weight',
       'weightClass',
-      'location',
       'instagram',
       'youtube',
       'facebook',
       'bio',
-      'gymInfo',
+      'primaryGym',
       'coachName',
       'affiliations',
       'trainingExperience',
+      'trainingStyle',
       'credentials',
       'nationalRank',
       'globalRank',
       'achievements',
-      'recordString',
-      'mediaGallery',
+      'recordHighlight',
+      'imageGallery',
       'videoHighlight',
       'medicalCertificate',
       'licenseDocument',

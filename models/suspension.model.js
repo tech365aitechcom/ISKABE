@@ -53,6 +53,11 @@ const suspensionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    medicalClearance: {
+      type: Boolean,
+      default: false,
+    },
+    medicalDocument: String,
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

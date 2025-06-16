@@ -5,7 +5,8 @@ const { protect } = require('../middlewares/auth.middleware')
 
 router.post('/', protect, HomepageConfigController.createHomePageConfig)
 router.get('/', HomepageConfigController.getHomePageConfig)
-// router.put('/:id', HomepageConfigController.updateSettings)
-// router.delete('/:id', HomepageConfigController.deleteSettings)
+router.get('/navbar', HomepageConfigController.getNavbarConfig)
+router.put('/:id', HomepageConfigController.updateHomePageConfig)
+router.delete('/:id', HomepageConfigController.deleteHomePageConfig)
 
 module.exports = router

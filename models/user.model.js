@@ -6,9 +6,8 @@ const TrainerProfile = require('./TrainerProfile.model')
 
 const userSchema = new mongoose.Schema(
   {
-    profilePhoto: {
-      type: String,
-    },
+    profilePhoto: { type: String },
+
     firstName: {
       type: String,
       required: [true, 'First Name is required'],
@@ -30,15 +29,13 @@ const userSchema = new mongoose.Schema(
       match: [/^[A-Za-z]+$/, 'Nick Name must contain only letters'],
       trim: true,
     },
-    userName: {
-      type: String,
-      trim: true,
-    },
+    userName: { type: String, trim: true },
     suffix: {
       type: String,
       match: [/^[A-Za-z]+$/, 'Suffix must contain only letters'],
       trim: true,
     },
+
     email: {
       type: String,
       required: [true, 'Email Address is required'],
@@ -46,15 +43,15 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [validator.isEmail, 'Please enter a valid email address'],
     },
+
     role: {
       type: String,
       enum: ['user', 'parent', 'fighter', 'trainer', 'promoter', 'superAdmin'],
       required: [true, 'Role is required'],
     },
-    gender: {
-      type: String,
-      enum: ['Male', 'Female', 'Other'],
-    },
+
+    gender: { type: String, enum: ['Male', 'Female', 'Other'] },
+
     dateOfBirth: {
       type: Date,
       validate: {
@@ -66,25 +63,13 @@ const userSchema = new mongoose.Schema(
         message: 'You must be at least 18 years old',
       },
     },
-    country: {
-      type: String,
-      required: [true, 'Country is required'],
-    },
-    state: {
-      type: String,
-    },
-    city: {
-      type: String,
-    },
-    street1: {
-      type: String,
-    },
-    street2: {
-      type: String,
-    },
-    postalCode: {
-      type: String,
-    },
+
+    country: { type: String, required: [true, 'Country is required'] },
+    state: { type: String },
+    city: { type: String },
+    street1: { type: String },
+    street2: { type: String },
+    postalCode: { type: String },
 
     phoneNumber: {
       type: String,
@@ -96,10 +81,8 @@ const userSchema = new mongoose.Schema(
         message: 'Please enter a valid phone number',
       },
     },
-    isPremium: {
-      type: Boolean,
-      default: false,
-    },
+
+    isPremium: { type: Boolean, default: false },
     about: {
       type: String,
       maxlength: [500, 'About Us must be max 500 characters'],
@@ -108,6 +91,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       maxlength: [500, 'Notes must be max 500 characters'],
     },
+
     password: {
       type: String,
       required: [true, 'Password is required'],
@@ -119,14 +103,13 @@ const userSchema = new mongoose.Schema(
         message: 'Password must contain at least one number',
       },
     },
+
     termsAgreed: {
       type: Boolean,
       required: [true, 'You must agree to the terms and conditions'],
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
+
+    isVerified: { type: Boolean, default: false },
     verificationToken: String,
     verificationTokenExpiry: Date,
     resetPasswordToken: String,
@@ -135,9 +118,7 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    lastLogin: {
-      type: Date,
-    },
+    lastLogin: { type: Date },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -145,10 +126,35 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 )
 
-// Hash the password before saving
+// Virtual for fighterProfile
+userSchema.virtual('fighterProfile', {
+  ref: 'FighterProfile',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true,
+})
+
+// Virtual for trainerProfile
+userSchema.virtual('trainerProfile', {
+  ref: 'TrainerProfile',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true,
+})
+
+// Virtual for suspension
+userSchema.virtual('suspension', {
+  ref: 'Suspension',
+  localField: '_id',
+  foreignField: 'person',
+})
+
+// Hash password before save
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next()
   try {
@@ -160,26 +166,23 @@ userSchema.pre('save', async function (next) {
   }
 })
 
-// Method to compare passwords
+// Compare password method
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password)
 }
 
+// Post-save hook to auto-create fighter/trainer profile
 userSchema.post('save', async function (doc, next) {
   try {
     if (doc.role === 'fighter') {
       const exists = await FighterProfile.findOne({ userId: doc._id })
       if (!exists) {
-        await FighterProfile.create({
-          userId: doc._id,
-        })
+        await FighterProfile.create({ userId: doc._id })
       }
     } else if (doc.role === 'trainer') {
       const exists = await TrainerProfile.findOne({ userId: doc._id })
       if (!exists) {
-        await TrainerProfile.create({
-          userId: doc._id,
-        })
+        await TrainerProfile.create({ userId: doc._id })
       }
     }
     next()

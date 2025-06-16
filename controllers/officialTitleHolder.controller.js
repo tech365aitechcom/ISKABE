@@ -20,7 +20,7 @@ exports.createOfficialTitleHolder = async (req, res) => {
     await rule.save()
 
     res.status(201).json({
-      message: 'Rule created successfully',
+      message: 'Official Title Holder created successfully',
       data: rule,
     })
   } catch (error) {
@@ -36,6 +36,9 @@ exports.getAllOfficialTitleHolders = async (req, res) => {
       sport,
       ageClass,
       weightClass,
+      country,
+      state,
+      city,
       search,
       page = 1,
       limit = 10,
@@ -45,6 +48,9 @@ exports.getAllOfficialTitleHolders = async (req, res) => {
     if (sport) filter.sport = sport
     if (ageClass) filter.ageClass = ageClass
     if (weightClass) filter.weightClass = weightClass
+    if (country) filter['fighter.userId.country'] = country
+    if (state) filter['fighter.userId.state'] = state
+    if (city) filter['fighter.userId.city'] = city
     if (search) {
       filter.$or = [{ name: { $regex: search, $options: 'i' } }]
     }

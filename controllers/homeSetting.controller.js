@@ -71,3 +71,44 @@ exports.getHomePageConfig = async (req, res) => {
     res.status(500).json({ success: false, message: err.message })
   }
 }
+
+exports.getNavbarConfig = async (req, res) => {
+  try {
+    // Fetch only logo and menuItems fields
+    const settings = await HomepageConfig.findOne()
+      .select('logo menuItems')
+      .lean()
+
+    res.json({
+      success: true,
+      data: settings,
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+exports.updateHomePageConfig = async (req, res) => {
+  try {
+    const settings = await HomepageConfig.findOneAndUpdate({}, req.body, {
+      new: true,
+      upsert: true,
+    })
+    res.json({
+      success: true,
+      message: 'Home page config updated',
+      data: settings,
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}
+
+exports.deleteHomePageConfig = async (req, res) => {
+  try {
+    await HomepageConfig.deleteMany({})
+    res.json({ success: true, message: 'Home page config deleted' })
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message })
+  }
+}

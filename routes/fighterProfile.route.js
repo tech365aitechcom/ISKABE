@@ -6,6 +6,9 @@ const { protect } = require('../middlewares/auth.middleware')
 // Get fighter profile route
 router.get('/', fighterProfileController.getAllFighterProfiles)
 
+// Get fighter by id
+router.get('/:id', fighterProfileController.getFighterProfileById)
+
 // Update fighter profile route
 router.put('/:id', protect, fighterProfileController.updateFighterProfileById)
 

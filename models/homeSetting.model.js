@@ -34,7 +34,13 @@ const HomepageConfigSchema = new Schema(
     tagline: { type: String, maxlength: 100 },
     heroImage: String,
     cta: CTASchema,
-
+    latestMedia: [
+      {
+        image: { type: String, required: true },
+        title: { type: String, required: true },
+        sortOrder: { type: Number, required: true },
+      },
+    ],
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

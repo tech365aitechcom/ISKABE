@@ -16,19 +16,20 @@ const trainerProfileSchema = new mongoose.Schema(
     gymLocation: String,
     // Experience Info
     yearsOfExperience: String,
-    trainerTypes: [String],
+    trainerType: String,
     preferredRuleSets: [String],
 
     // Credentials
-    certifications: [String], // Array of file paths or URLs
+    certification: String,
     bio: String,
     instagram: String,
     facebook: String,
+    youtube: String,
 
     affiliatedFighters: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'FighterProfile',
       },
     ],
 
@@ -48,8 +49,10 @@ const trainerProfileSchema = new mongoose.Schema(
       },
     ],
     accreditationType: String,
-
-    medicalDocuments: [String],
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 )

@@ -1,5 +1,6 @@
 const User = require('../models/user.model')
 const TrainerProfile = require('../models/TrainerProfile.model')
+const Suspension = require('../models/suspension.model')
 
 exports.getAllTrainerProfiles = async (req, res) => {
   try {
@@ -38,19 +39,55 @@ exports.updateTrainerProfileById = async (req, res) => {
       'gymLocation',
       'yearsOfExperience',
       'trainerType',
-      'preferredStyles',
-      'certifications',
-      'bioAchievements',
-      'instagramUrl',
-      'facebookUrl',
-      'youtubeUrl',
+      'preferredRuleSets',
+      'certification',
+      'bio',
+      'instagram',
+      'facebook',
+      'youtube',
       'affiliatedFighters',
       'emergencyContactName',
       'emergencyContactNumber',
       'associatedEvents',
       'accreditationType',
-      'medicalDocs',
+      'isSuspended',
     ]
+
+    // --- Suspension logic ---
+    if (payload.isSuspended) {
+      const existingSuspension = await Suspension.findOne({
+        person: userId,
+        status: { $in: ['Active', 'Pending'] },
+      })
+
+      const suspensionData = {
+        person: userId,
+        status: 'Active',
+        type: payload.suspensionType,
+        incidentDate: payload.suspensionStartDate,
+        description: payload.suspensionNotes,
+        daysWithoutTraining: payload.daysWithoutTraining,
+        indefinite: payload.indefinite,
+        medicalClearance: payload.medicalClearance,
+        medicalDocument: payload.medicalDocument,
+        createdBy: userId,
+      }
+
+      if (existingSuspension) {
+        // Update existing suspension
+        await Suspension.findByIdAndUpdate(
+          existingSuspension._id,
+          suspensionData,
+          {
+            new: true,
+            runValidators: true,
+          }
+        )
+      } else {
+        // Create new suspension
+        await Suspension.create(suspensionData)
+      }
+    }
 
     // --- Extract user and trainer updates ---
     const userUpdates = {}
@@ -69,20 +106,20 @@ exports.updateTrainerProfileById = async (req, res) => {
       trainerUpdates.trainerType &&
       typeof trainerUpdates.trainerType === 'string'
     ) {
-      trainerUpdates.trainerTypes = trainerUpdates.trainerType
+      trainerUpdates.trainerType = trainerUpdates.trainerType
         .split(',')
         .map((type) => type.trim())
       delete trainerUpdates.trainerType
     }
 
     if (
-      trainerUpdates.preferredStyles &&
-      typeof trainerUpdates.preferredStyles === 'string'
+      trainerUpdates.preferredRuleSets &&
+      typeof trainerUpdates.preferredRuleSets === 'string'
     ) {
-      trainerUpdates.preferredRuleSets = trainerUpdates.preferredStyles
+      trainerUpdates.preferredRuleSets = trainerUpdates.preferredRuleSets
         .split(',')
         .map((style) => style.trim())
-      delete trainerUpdates.preferredStyles
+      delete trainerUpdates.preferredRuleSets
     }
 
     // --- Update User model ---
@@ -104,7 +141,7 @@ exports.updateTrainerProfileById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Trainer profile and user info updated successfully',
+      message: 'Trainer profile updated successfully',
       data: {
         user,
         trainerProfile,
