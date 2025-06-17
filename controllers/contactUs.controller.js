@@ -20,7 +20,7 @@ exports.createContact = async (req, res) => {
 
 exports.getAllContacts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, subject } = req.query
+    const { page = 1, limit = 10, search, subject, state } = req.query
 
     const filter = {}
     if (search) {
@@ -31,6 +31,7 @@ exports.getAllContacts = async (req, res) => {
       ]
     }
     if (subject) filter.subject = subject
+    if (state) filter.state = state
 
     const total = await Contact.countDocuments(filter)
     const contacts = await Contact.find(filter)
