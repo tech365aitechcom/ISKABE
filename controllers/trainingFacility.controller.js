@@ -66,6 +66,14 @@ exports.getAllFacilities = async (req, res) => {
         'createdBy',
         '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
       )
+      .populate({
+        path: 'trainers.existingTrainerId',
+        populate: { path: 'userId' },
+      })
+      .populate({
+        path: 'fighters.existingFighterId',
+        populate: { path: 'userId' },
+      })
     res.json({
       success: true,
       message: 'Training facilities fetched successfully',
@@ -129,6 +137,7 @@ exports.updateFacility = async (req, res) => {
       data: facility,
     })
   } catch (err) {
+    console.log(err)
     res.status(500).json({ success: false, message: err.message })
   }
 }
