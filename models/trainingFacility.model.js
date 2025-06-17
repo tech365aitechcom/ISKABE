@@ -7,7 +7,7 @@ const trainerSchema = new mongoose.Schema({
     ref: 'TrainerProfile',
   }, // for searchable dropdown (optional)
   name: { type: String, trim: true, maxlength: 100 }, // required if no existingTrainerId
-  roleTitle: { type: String, trim: true, maxlength: 100 },
+  role: { type: String, trim: true, maxlength: 100 },
   email: {
     type: String,
     trim: true,
