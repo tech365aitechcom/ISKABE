@@ -39,7 +39,12 @@ exports.createHomePageConfig = async (req, res) => {
 exports.getHomePageConfig = async (req, res) => {
   try {
     // Fetch homepage configuration
-    const settings = await HomepageConfig.findOne()
+    const settings = await HomepageConfig.findOne().lean()
+
+    // Sort menuItems by sortOrder if available
+    if (settings?.menuItems?.length) {
+      settings.menuItems.sort((a, b) => a.sortOrder - b.sortOrder)
+    }
 
     // Fetch the latest published news
     const latestNews = await News.findOne({
@@ -53,12 +58,12 @@ exports.getHomePageConfig = async (req, res) => {
     // Fetch upcoming events (sorted by nearest startDate)
     const upcomingEvents = await Event.find({
       startDate: { $gte: new Date() },
-      isDraft: false, // only published events
+      isDraft: false,
     })
-      .sort({ startDate: 1 }) // soonest first
-      .limit(4) // adjust how many events you want
+      .sort({ startDate: 1 })
+      .limit(4)
       .select('name startDate endDate venue poster briefDescription')
-      .populate('venue', 'name location') // populate venue name/location
+      .populate('venue', 'name location')
       .lean()
 
     res.json({

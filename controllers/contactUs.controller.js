@@ -9,7 +9,7 @@ exports.createContact = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Message sent successfully',
+      message: 'Thank you! Your message has been received.',
       data: contact,
     })
   } catch (err) {
