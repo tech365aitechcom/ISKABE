@@ -88,6 +88,7 @@ exports.createPromoter = async (req, res) => {
     // Create promoter profile
     const promoter = new promoterProfileModel({
       userId: user._id,
+      name,
       contactPersonName,
       alternatePhoneNumber,
       abbreviation,
@@ -114,6 +115,22 @@ exports.createPromoter = async (req, res) => {
       promoter,
     })
   } catch (error) {
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0]
+
+      let message = 'Duplicate value detected.'
+      if (duplicateField === 'email') {
+        message = 'Email already exists.'
+      } else if (duplicateField === 'name') {
+        message = 'Promoter with same name already exists.'
+      }
+
+      return res.status(400).json({
+        success: false,
+        message,
+      })
+    }
+
     res.status(500).json({ error: error.message })
   }
 }
@@ -128,9 +145,7 @@ exports.getAllPromoterProfile = async (req, res) => {
       ? {
           $or: [
             { abbreviation: { $regex: searchRegex } },
-            { 'user.firstName': { $regex: searchRegex } },
-            { 'user.lastName': { $regex: searchRegex } },
-            { 'user.email': { $regex: searchRegex } },
+            { name: { $regex: searchRegex } },
           ],
         }
       : {}
@@ -210,7 +225,7 @@ exports.getPromoterProfileById = async (req, res) => {
       .findById(id)
       .populate(
         'userId',
-        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+        '-verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
       )
     if (!promoter) {
       return res.status(404).json({ error: 'Promoter not found' })
@@ -232,7 +247,6 @@ exports.updatePromoterProfile = async (req, res) => {
     const payload = req.body
 
     const userFields = [
-      'name',
       'userName',
       'email',
       'phoneNumber',
@@ -247,6 +261,7 @@ exports.updatePromoterProfile = async (req, res) => {
     ]
 
     const promoterFields = [
+      'name',
       'contactPersonName',
       'alternatePhoneNumber',
       'abbreviation',
@@ -282,7 +297,9 @@ exports.updatePromoterProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' })
     }
-    const updatedPromoter = await promoterProfileModel.findOneAndUpdate(
+
+    const updatedPromoter = await promoterProfileModel.findByIdAndUpdate(
+      id,
       promoterUpdates,
       { new: true, runValidators: true }
     )
@@ -308,7 +325,7 @@ exports.deletePromoterProfile = async (req, res) => {
     if (!promoter) {
       return res.status(404).json({ error: 'Promoter not found' })
     }
-
+    console.log({ promoter })
     // Delete the associated user
     await User.findByIdAndDelete(promoter.userId)
 

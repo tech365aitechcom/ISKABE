@@ -302,21 +302,23 @@ exports.getUserById = async (req, res) => {
       .populate([
         {
           path: 'trainerProfile',
-          populate: {
-            path: 'affiliatedFighters',
-            model: 'FighterProfile',
-            populate: {
-              path: 'userId',
-              model: 'User',
+          populate: [
+            {
+              path: 'affiliatedFighters',
+              model: 'FighterProfile',
+              populate: {
+                path: 'userId',
+                model: 'User',
+              },
             },
-          },
+            {
+              path: 'associatedEvents',
+              model: 'Event',
+            },
+          ],
         },
         {
-          path: 'trainerProfile',
-          populate: {
-            path: 'associatedEvents',
-            model: 'Event',
-          },
+          path: 'fighterProfile',
         },
       ])
 

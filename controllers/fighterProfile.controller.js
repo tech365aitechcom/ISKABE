@@ -188,14 +188,14 @@ exports.updateFighterProfileById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'User and Fighter Profile updated successfully',
+      message: 'Fighter Profile updated successfully',
       data: { user, fighterProfile },
     })
   } catch (error) {
     console.error('Update error:', error)
     return res.status(500).json({
       success: false,
-      message: 'Server error while updating user and fighter profile',
+      message: 'Server error while updating fighter profile',
     })
   }
 }

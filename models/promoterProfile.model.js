@@ -10,6 +10,13 @@ const promoterProfileSchema = new mongoose.Schema(
     },
 
     // Specific to promoter
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+      unique: true,
+    },
     abbreviation: {
       type: String,
       required: true,
