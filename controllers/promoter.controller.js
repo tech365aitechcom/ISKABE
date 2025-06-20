@@ -225,7 +225,7 @@ exports.getPromoterProfileById = async (req, res) => {
       .findById(id)
       .populate(
         'userId',
-        '-verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
       )
     if (!promoter) {
       return res.status(404).json({ error: 'Promoter not found' })

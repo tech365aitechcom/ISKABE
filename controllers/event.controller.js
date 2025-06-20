@@ -1,5 +1,6 @@
 const { roles } = require('../constant')
 const Event = require('../models/event.model')
+const Venue = require('../models/venue.model')
 
 exports.createEvent = async (req, res) => {
   try {
@@ -47,33 +48,81 @@ exports.createEvent = async (req, res) => {
 
 exports.getAllEvents = async (req, res) => {
   try {
-    const { search, sportType, isPublished, page = 1, limit = 10 } = req.query
+    const {
+      search,
+      sportType,
+      country,
+      state,
+      city,
+      date,
+      isPublished,
+      page = 1,
+      limit = 10,
+    } = req.query
 
     const filter = {}
 
-    if (sportType) filter.sportType = sportType
-
-    if (isPublished === 'true') {
+    // Normalize and apply isPublished filter
+    const isPublishedStr = String(isPublished).toLowerCase()
+    if (isPublishedStr === 'true') {
       filter.isDraft = false
-    } else if (isPublished === 'false') {
+    } else if (isPublishedStr === 'false') {
       filter.isDraft = true
     }
 
-    if (search) {
-      filter.$or = [{ name: { $regex: search, $options: 'i' } }]
+    if (sportType) filter.sportType = sportType
+    if (search) filter.name = { $regex: search, $options: 'i' }
+
+    // Filter by date range on event's startDate
+    if (date) {
+      const start = new Date(date)
+      const end = new Date(date)
+      end.setHours(23, 59, 59, 999)
+      filter.startDate = { $gte: start, $lte: end }
     }
 
+    // 🧠 Step 1: Find matching venue IDs
+    const venueQuery = {}
+    if (country) venueQuery['address.country'] = country
+    if (state) venueQuery['address.state'] = state
+    if (city) venueQuery['address.city'] = city
+
+    let venueIds = []
+    if (country || state || city) {
+      const venues = await Venue.find(venueQuery).select('_id')
+      venueIds = venues.map((v) => v._id)
+
+      // If no venue matches, return early
+      if (venueIds.length === 0) {
+        return res.json({
+          success: true,
+          message: 'Event list fetched',
+          data: {
+            items: [],
+            pagination: {
+              totalItems: 0,
+              currentPage: parseInt(page),
+              totalPages: 0,
+              pageSize: parseInt(limit),
+            },
+          },
+        })
+      }
+
+      filter.venue = { $in: venueIds }
+    }
+
+    // Pagination values
     const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    // Count total matching events
     const total = await Event.countDocuments(filter)
 
+    // 🧠 Step 2: Find matching events
     const events = await Event.find(filter)
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate(
-        'createdBy',
-        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
-      )
       .populate('venue')
       .populate({
         path: 'promoter',
@@ -83,6 +132,10 @@ exports.getAllEvents = async (req, res) => {
             '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v',
         },
       })
+      .populate(
+        'createdBy',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
 
     res.json({
       success: true,
@@ -98,7 +151,7 @@ exports.getAllEvents = async (req, res) => {
       },
     })
   } catch (error) {
-    console.error(error)
+    console.error('Error fetching events:', error)
     res.status(500).json({ error: 'Error fetching events' })
   }
 }

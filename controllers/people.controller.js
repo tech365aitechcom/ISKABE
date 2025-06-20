@@ -2,6 +2,7 @@ const { roles } = require('../constant')
 const User = require('../models/user.model')
 const emailService = require('../services/email.service')
 const crypto = require('crypto')
+const mongoose = require('mongoose')
 
 const generateVerificationToken = () => {
   return crypto.randomBytes(20).toString('hex')
@@ -22,7 +23,7 @@ exports.createPeople = async (req, res) => {
       middleName,
       lastName,
       suffix,
-      nickname,
+      nickName,
       email,
       gender,
       dateOfBirth,
@@ -57,7 +58,7 @@ exports.createPeople = async (req, res) => {
       middleName,
       lastName,
       suffix,
-      nickname,
+      nickName,
       email,
       gender,
       dateOfBirth,
@@ -89,7 +90,6 @@ exports.createPeople = async (req, res) => {
     res.status(201).json({
       message:
         'People created successfully! Please check registered email for verification.',
-      people,
     })
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -99,46 +99,87 @@ exports.createPeople = async (req, res) => {
 exports.getAllPeople = async (req, res) => {
   try {
     const { id: userId } = req.user
-    const { id, name, gender, role, page = 1, limit = 10 } = req.query
+    let { id, name, gender, role, page = 1, limit = 10 } = req.query
+
+    // Sanitize buffers in query
+    Object.keys(req.query).forEach((key) => {
+      if (Buffer.isBuffer(req.query[key])) {
+        req.query[key] = req.query[key].toString('utf8')
+      }
+    })
 
     const filter = {}
 
+    // Build an array of AND conditions
+    const andConditions = []
+
+    // Add ID filter if valid
     if (id) {
-      filter._id = id
-    }
-
-    if (name) {
-      filter.$or = [
-        { firstName: { $regex: name, $options: 'i' } },
-        { lastName: { $regex: name, $options: 'i' } },
-      ]
-    }
-
-    if (gender) {
-      if (gender === 'Unspecified') {
-        filter.$or = [
-          ...(filter.$or || []),
-          { gender: { $exists: false } },
-          { gender: 'other' },
-        ]
+      if (typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+        andConditions.push({ _id: new mongoose.Types.ObjectId(id) })
       } else {
-        filter.gender = gender
+        return res
+          .status(400)
+          .json({ success: false, message: 'Invalid ID format' })
       }
     }
 
-    if (role) {
-      filter.role = role
+    // Name filter
+    if (name) {
+      const parts = name.trim().split(/\s+/)
+
+      if (parts.length === 1) {
+        // Single part: match first OR last name
+        andConditions.push({
+          $or: [
+            { firstName: { $regex: parts[0], $options: 'i' } },
+            { lastName: { $regex: parts[0], $options: 'i' } },
+          ],
+        })
+      } else if (parts.length >= 2) {
+        // Two or more parts: try matching firstName and lastName separately
+        andConditions.push({
+          $and: [
+            { firstName: { $regex: parts[0], $options: 'i' } },
+            { lastName: { $regex: parts.slice(1).join(' '), $options: 'i' } },
+          ],
+        })
+      }
     }
 
-    // Fetch the current user's role
+    // Gender filter
+    if (gender) {
+      if (gender === 'Unspecified') {
+        andConditions.push({
+          $or: [{ gender: { $exists: false } }, { gender: 'other' }],
+        })
+      } else {
+        andConditions.push({ gender })
+      }
+    }
+
+    // Role filter
+    if (role) {
+      andConditions.push({ role })
+    }
+
+    // Get current user's role
     const currentUser = await User.findById(userId).select('role')
 
     if (currentUser?.role === 'superAdmin') {
-      // Exclude the current superAdmin user from the results
-      filter._id = { ...(filter._id || {}), $ne: userId }
+      // Exclude self from results
+      andConditions.push({ _id: { $ne: userId } })
+    }
+
+    // Assign AND conditions to filter
+    if (andConditions.length > 0) {
+      filter.$and = andConditions
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    // Debug log
+    console.log('Final Filter:', JSON.stringify(filter, null, 2))
 
     const users = await User.find(filter)
       .select(
@@ -166,7 +207,7 @@ exports.getAllPeople = async (req, res) => {
       },
     })
   } catch (err) {
-    console.error(err)
+    console.error('Error in getAllPeople:', err)
     res.status(500).json({ message: 'Internal server error' })
   }
 }
