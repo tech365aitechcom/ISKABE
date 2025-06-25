@@ -7,11 +7,17 @@ exports.getVenues = async (req, res) => {
   try {
     const { city, status, search, page = 1, limit = 10 } = req.query
     const filter = {}
-    if (city) filter.city = city
+
+    if (city) {
+      filter['address.city'] = { $regex: city, $options: 'i' }
+    }
+
     if (status) filter.status = status
+
     if (search) {
       filter.$or = [{ name: { $regex: search, $options: 'i' } }]
     }
+
     const skip = (parseInt(page) - 1) * parseInt(limit)
     const total = await Venue.countDocuments(filter)
 
@@ -80,9 +86,21 @@ exports.createVenue = async (req, res) => {
       data: venue,
     })
   } catch (error) {
-    console.log(error)
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0]
 
-    res.status(400).json({ message: error.message })
+      let message = 'Duplicate value detected.'
+      if (duplicateField === 'name') {
+        message = 'Venue with same name already exists.'
+      }
+
+      return res.status(400).json({
+        success: false,
+        message,
+      })
+    }
+
+    res.status(500).json({ error: error.message })
   }
 }
 

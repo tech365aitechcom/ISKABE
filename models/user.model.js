@@ -2,7 +2,6 @@ const mongoose = require('mongoose')
 const validator = require('validator')
 const bcrypt = require('bcryptjs')
 const FighterProfile = require('./fighterProfile.model')
-const TrainerProfile = require('./TrainerProfile.model')
 
 const userSchema = new mongoose.Schema(
   {
@@ -58,9 +57,9 @@ const userSchema = new mongoose.Schema(
         validator: function (dob) {
           const today = new Date()
           const age = today.getFullYear() - dob.getFullYear()
-          return age >= 18
+          return age >= 13
         },
-        message: 'You must be at least 18 years old',
+        message: 'You must be at least 13 years old',
       },
     },
 
@@ -178,11 +177,6 @@ userSchema.post('save', async function (doc, next) {
       const exists = await FighterProfile.findOne({ userId: doc._id })
       if (!exists) {
         await FighterProfile.create({ userId: doc._id })
-      }
-    } else if (doc.role === 'trainer') {
-      const exists = await TrainerProfile.findOne({ userId: doc._id })
-      if (!exists) {
-        await TrainerProfile.create({ userId: doc._id })
       }
     }
     next()

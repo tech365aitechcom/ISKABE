@@ -96,12 +96,12 @@ exports.login = async (req, res) => {
     )
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res.status(404).json({ message: 'Email not registered' })
     }
 
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res.status(401).json({ message: 'Incorrect password' })
     }
 
     if (!user.isVerified) {
@@ -141,7 +141,7 @@ exports.forgotPassword = async (req, res) => {
   try {
     const user = await User.findOne({ email })
     if (!user) {
-      return res.status(404).json({ message: 'Email not found' })
+      return res.status(404).json({ message: 'Email not registered' })
     }
 
     const resetToken = generateVerificationToken()
@@ -273,6 +273,14 @@ exports.changePassword = async (req, res) => {
         .json({ success: false, message: 'Current password is incorrect.' })
     }
 
+    const isSameAsOld = await bcrypt.compare(newPassword, user.password)
+    if (isSameAsOld) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password.',
+      })
+    }
+
     user.password = newPassword
     await user.save()
 
@@ -293,12 +301,8 @@ exports.getUserById = async (req, res) => {
       )
       .populate([
         {
-          path: 'fighterProfile trainerProfile',
+          path: 'trainerProfile',
           populate: [
-            {
-              path: 'associatedEvents',
-              model: 'Event',
-            },
             {
               path: 'affiliatedFighters',
               model: 'FighterProfile',
@@ -307,7 +311,14 @@ exports.getUserById = async (req, res) => {
                 model: 'User',
               },
             },
+            {
+              path: 'associatedEvents',
+              model: 'Event',
+            },
           ],
+        },
+        {
+          path: 'fighterProfile',
         },
       ])
 

@@ -14,6 +14,27 @@ exports.getAllTrainerProfiles = async (req, res) => {
   }
 }
 
+exports.createTrainerProfile = async (req, res) => {
+  try {
+    const { id: userId } = req.user
+
+    const trainer = new TrainerProfile({
+      ...req.body,
+      userId,
+    })
+
+    await trainer.save()
+
+    return res.status(201).json({
+      success: true,
+      message: 'Trainer created successfully',
+      data: trainer,
+    })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message })
+  }
+}
+
 exports.updateTrainerProfileById = async (req, res) => {
   try {
     const { id: userId } = req.user
@@ -51,6 +72,7 @@ exports.updateTrainerProfileById = async (req, res) => {
       'associatedEvents',
       'accreditationType',
       'isSuspended',
+      'isDraft',
     ]
 
     // --- Suspension logic ---
@@ -99,17 +121,6 @@ exports.updateTrainerProfileById = async (req, res) => {
       } else if (trainerFields.includes(key)) {
         trainerUpdates[key] = payload[key]
       }
-    }
-
-    // --- Transform specific fields if needed ---
-    if (
-      trainerUpdates.trainerType &&
-      typeof trainerUpdates.trainerType === 'string'
-    ) {
-      trainerUpdates.trainerType = trainerUpdates.trainerType
-        .split(',')
-        .map((type) => type.trim())
-      delete trainerUpdates.trainerType
     }
 
     if (

@@ -53,6 +53,10 @@ const trainerProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isDraft: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 )
