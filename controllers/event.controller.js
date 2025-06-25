@@ -1,6 +1,7 @@
 const { roles } = require('../constant')
 const Event = require('../models/event.model')
 const Venue = require('../models/venue.model')
+const Registration = require('../models/registration.model')
 
 exports.createEvent = async (req, res) => {
   try {
@@ -246,7 +247,41 @@ exports.getEventById = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
-    res.json({ success: true, data: event })
+    let registeredFighters = []
+
+    if (event.registeredParticipants > 0) {
+      const fighters = await Registration.find({
+        event: id,
+        registrationType: 'fighter',
+      })
+        .populate({
+          path: 'createdBy',
+          select: 'fighterProfile',
+          populate: {
+            path: 'fighterProfile',
+            select: '_id',
+          },
+        })
+        .select('firstName lastName weightClass country createdBy')
+        .lean()
+
+      // Reshape data to only return required fields
+      registeredFighters = fighters.map((fighter) => ({
+        firstName: fighter.firstName,
+        lastName: fighter.lastName,
+        weightClass: fighter.weightClass,
+        country: fighter.country,
+        fighterProfileId: fighter.createdBy?.fighterProfile?._id || null,
+      }))
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...event.toObject(),
+        registeredFighters,
+      },
+    })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Error fetching event details' })

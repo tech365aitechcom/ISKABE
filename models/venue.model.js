@@ -5,6 +5,7 @@ const venueSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, 'Venue name is required'],
+      unique: true,
       trim: true,
     },
     address: {
