@@ -4,10 +4,21 @@ const Suspension = require('../models/suspension.model')
 exports.createSuspension = async (req, res) => {
   try {
     const { id: userId, role } = req.user
+    const { person } = req.body
+
     if (role !== roles.superAdmin) {
       return res.status(403).json({
         success: false,
         message: 'You are not allowed to suspend users.',
+      })
+    }
+
+    const existingSuspension = await Suspension.findOne({ person })
+
+    if (existingSuspension) {
+      return res.status(400).json({
+        success: false,
+        message: 'This user is already suspended.',
       })
     }
 

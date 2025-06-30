@@ -2,7 +2,12 @@ const mongoose = require('mongoose')
 
 const ContactSettingsSchema = new mongoose.Schema(
   {
-    // emailRecipients: [{ type: String, required: true }],
+    topics: [
+      {
+        type: String,
+        unique: true,
+      },
+    ],
     enableCaptcha: { type: Boolean, default: true },
     address: { type: String },
     phone: { type: String },
