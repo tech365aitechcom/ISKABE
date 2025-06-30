@@ -43,42 +43,91 @@ exports.getAllOfficialTitleHolders = async (req, res) => {
       page = 1,
       limit = 10,
     } = req.query
-    const filter = {}
-    if (proClassification) filter.proClassification = proClassification
-    if (sport) filter.sport = sport
-    if (ageClass) filter.ageClass = ageClass
-    if (weightClass) filter.weightClass = weightClass
-    if (country) filter['fighter.userId.country'] = country
-    if (state) filter['fighter.userId.state'] = state
-    if (city) filter['fighter.userId.city'] = city
-    if (search) {
-      filter.$or = [{ name: { $regex: search, $options: 'i' } }]
-    }
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-    const total = await OfficialTitleHolder.countDocuments(filter)
 
-    const officialTitleHolders = await OfficialTitleHolder.find(filter)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate(
-        'createdBy',
-        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
-      )
-      .populate({
-        path: 'fighter',
-        populate: {
-          path: 'userId',
-          select:
-            '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v',
+    const match = {}
+
+    if (proClassification) match.proClassification = proClassification
+    if (sport) match.sport = sport
+    if (ageClass) match.ageClass = ageClass
+    if (weightClass) match.weightClass = weightClass
+    if (search) match.title = { $regex: search, $options: 'i' }
+
+    const pipeline = [
+      { $match: match },
+      {
+        $lookup: {
+          from: 'fighterprofiles',
+          localField: 'fighter',
+          foreignField: '_id',
+          as: 'fighter',
         },
-      })
-      .sort({ createdAt: -1 })
+      },
+      { $unwind: { path: '$fighter', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'fighter.userId',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+    ]
+
+    const locationFilter = {}
+    if (country) locationFilter['user.country'] = country
+    if (state) locationFilter['user.state'] = state
+    if (city) locationFilter['user.city'] = city
+
+    if (Object.keys(locationFilter).length > 0) {
+      pipeline.push({ $match: locationFilter })
+    }
+
+    // Count total
+    const countPipeline = [...pipeline, { $count: 'total' }]
+    const countResult = await OfficialTitleHolder.aggregate(countPipeline)
+    const total = countResult[0]?.total || 0
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    pipeline.push({ $sort: { createdAt: -1 } })
+    pipeline.push({ $skip: skip })
+    pipeline.push({ $limit: parseInt(limit) })
+
+    // Project only required fields
+    pipeline.push({
+      $project: {
+        _id: 1,
+        title: 1,
+        date: 1,
+        proClassification: 1,
+        sport: 1,
+        ageClass: 1,
+        weightClass: 1,
+        notes: 1,
+        createdAt: 1,
+        fighter: 1,
+        user: {
+          _id: 1,
+          firstName: 1,
+          lastName: 1,
+          dateOfBirth: 1,
+          email: 1,
+          country: 1,
+          state: 1,
+          city: 1,
+          profilePhoto: 1,
+        },
+      },
+    })
+
+    const data = await OfficialTitleHolder.aggregate(pipeline)
 
     res.json({
       success: true,
       message: 'Official Title Holder list fetched',
       data: {
-        items: officialTitleHolders,
+        items: data,
         pagination: {
           totalItems: total,
           currentPage: parseInt(page),
@@ -89,7 +138,7 @@ exports.getAllOfficialTitleHolders = async (req, res) => {
     })
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'Error fetching rules' })
+    res.status(500).json({ error: 'Error fetching title holders' })
   }
 }
 
