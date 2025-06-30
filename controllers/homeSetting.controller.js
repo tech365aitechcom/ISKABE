@@ -2,6 +2,8 @@ const { roles } = require('../constant')
 const HomepageConfig = require('../models/homeSetting.model')
 const News = require('../models/news.model')
 const Event = require('../models/event.model')
+const FighterProfile = require('../models/fighterProfile.model') // Add this import
+const User = require('../models/user.model') // Add this import if not already imported
 
 exports.createHomePageConfig = async (req, res) => {
   try {
@@ -66,11 +68,36 @@ exports.getHomePageConfig = async (req, res) => {
       .populate('venue', 'name location')
       .lean()
 
+    // Fetch top fighters with their user details
+    const topFighters = await FighterProfile.find({})
+      .populate({
+        path: 'userId',
+        select: 'firstName lastName profileImage wins losses draws', // Adjust fields based on your User model
+      })
+      .select('height weight weightClass nationalRank globalRank imageGallery bio')
+      .limit(6) // Show top 6 fighters
+      .lean()
+
+    // Filter out fighters without user data and format the response
+    const formattedFighters = topFighters
+      .filter(fighter => fighter.userId)
+      .map(fighter => ({
+        _id: fighter._id,
+        name: `${fighter.userId.firstName} ${fighter.userId.lastName}`,
+        record: `${fighter.userId.wins || 0}–${fighter.userId.losses || 0}${fighter.userId.draws ? `–${fighter.userId.draws}` : ''}`,
+        image: fighter.userId.profileImage || fighter.imageGallery?.[0] || '/fighter.png',
+        weight: fighter.weight,
+        weightClass: fighter.weightClass,
+        rank: fighter.nationalRank || fighter.globalRank,
+        bio: fighter.bio
+      }))
+
     res.json({
       success: true,
       data: settings,
       latestNews,
       upcomingEvents,
+      topFighters: formattedFighters, // Add this to the response
     })
   } catch (err) {
     res.status(500).json({ success: false, message: err.message })
