@@ -75,7 +75,7 @@ exports.getHomePageConfig = async (req, res) => {
         select: 'firstName lastName profileImage wins losses draws', // Adjust fields based on your User model
       })
       .select('height weight weightClass nationalRank globalRank imageGallery bio')
-      .limit(6) // Show top 6 fighters
+      .limit(4) // Show top 6 fighters
       .lean()
 
     // Filter out fighters without user data and format the response
