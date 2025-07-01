@@ -41,6 +41,22 @@ const HomepageConfigSchema = new Schema(
         sortOrder: { type: Number, required: true },
       },
     ],
+    upcomingEvents: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Event',
+      },
+    ],
+    topFighters: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'FighterProfile',
+      },
+    ],
+    latestNews: {
+      type: Schema.Types.ObjectId,
+      ref: 'News',
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
