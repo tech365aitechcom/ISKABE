@@ -140,22 +140,34 @@ exports.forgotPassword = async (req, res) => {
 
   try {
     const user = await User.findOne({ email })
+
     if (!user) {
       return res.status(404).json({ message: 'Email not registered' })
+    }
+
+    // Rate limit: 15 minutes between reset requests
+    const now = Date.now()
+    const recentRequestGap = 15 * 60 * 1000 // 15 minutes
+
+    if (user.resetPasswordExpiry && user.resetPasswordExpiry - now > recentRequestGap) {
+      const waitMinutes = Math.ceil((user.resetPasswordExpiry - now) / 60000)
+      return res.status(429).json({
+        message: `Too many reset requests. Please wait ${waitMinutes} minutes before trying again.`,
+      })
     }
 
     const resetToken = generateVerificationToken()
 
     user.resetPasswordToken = resetToken
-    user.resetPasswordExpiry = Date.now() + config.resetTokenExpiry * 1000 // 1 hour
+    user.resetPasswordExpiry = now + config.resetTokenExpiry * 1000 // typically 1 hour
     await user.save()
 
     const resetLink = `${redirectUrl}?token=${resetToken}`
     await emailService.sendForgotPasswordEmail(email, resetLink)
 
-    res
-      .status(200)
-      .json({ message: 'Password reset email sent. Please check your inbox.' })
+    res.status(200).json({
+      message: 'Password reset email sent. Please check your inbox.',
+    })
   } catch (error) {
     console.error('Forgot password error:', error)
     res
@@ -163,6 +175,7 @@ exports.forgotPassword = async (req, res) => {
       .json({ message: 'Something went wrong while processing your request' })
   }
 }
+
 
 exports.resetPassword = async (req, res) => {
   const errors = validationResult(req)
