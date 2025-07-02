@@ -5,6 +5,8 @@ const connectDB = require('./config/db')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const { uploadS3, upload } = require('./config/s3')
+const swaggerUi = require('swagger-ui-express')
+const swaggerSpec = require('./swagger') // import from above
 
 const masterRoutes = require('./routes/master.route')
 const userRoutes = require('./routes/user.route')
@@ -29,6 +31,9 @@ app.use(cors())
 app.use(express.json())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+
+// Serve Swagger API documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // Routes
 app.use('/api/master', masterRoutes)
