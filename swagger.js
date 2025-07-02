@@ -7,9 +7,9 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'My API',
+      title: 'IKF API Documentation',
       version: '1.0.0',
-      description: 'A sample Express API using Swagger',
+      description: 'API documentation for the IKF project',
     },
     servers: [
       {
@@ -30,7 +30,7 @@ const options = {
       },
     },
   },
-  apis: ['./routes/*.js'],
+  apis: ['./docs/*.js'],
 }
 
 const swaggerSpec = swaggerJsdoc(options)

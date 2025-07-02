@@ -6,7 +6,7 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const { uploadS3, upload } = require('./config/s3')
 const swaggerUi = require('swagger-ui-express')
-const swaggerSpec = require('./swagger') // import from above
+const swaggerSpec = require('./swagger')
 
 const masterRoutes = require('./routes/master.route')
 const userRoutes = require('./routes/user.route')
