@@ -28,17 +28,35 @@ exports.createEvent = async (req, res) => {
   } catch (error) {
     console.error(error)
 
-    // Handle MongoDB Duplicate Key Error
+    // Duplicate key error
     if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duplicate key error',
-        keyPattern: error.keyPattern,
-        keyValue: error.keyValue,
-        errmsg: error.errmsg,
-      })
+      const duplicatedField = Object.keys(error.keyPattern || {})[0]
+      const message = `${
+        duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
+      } already exists. Please choose another.`
+      return res.status(400).json({ error: message })
     }
 
+    // Validation errors (including CastError and custom validators)
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((err) => {
+        // Clean up ObjectId Cast errors
+        if (
+          err.name === 'CastError' &&
+          err.kind === 'ObjectId' &&
+          err.value === ''
+        ) {
+          if (err.path === 'venue') return 'Venue is required'
+          if (err.path === 'promoter') return 'Promoter is required'
+        }
+
+        return err.message
+      })
+
+      return res.status(400).json({ error: messages.join(', ') })
+    }
+
+    // Default fallback
     res.status(500).json({
       success: false,
       message: 'Error creating event',
