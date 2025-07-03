@@ -60,72 +60,49 @@ const trainingFacilitySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
       trim: true,
       minlength: 3,
       maxlength: 50,
     },
     logo: {
       type: String,
-      required: true,
     },
     martialArtsStyles: {
       type: [String],
-      required: true,
-      validate: {
-        validator: (arr) => arr.length > 0,
-        message: 'At least one martial arts style must be selected',
-      },
     },
     email: {
       type: String,
-      required: true,
       lowercase: true,
-      validate: [validator.isEmail, 'Please enter a valid email address'],
     },
     phoneNumber: {
       type: String,
-      required: true,
-      validate: {
-        validator: (v) => /^\d+$/.test(v),
-        message: 'Phone number must contain only digits',
-      },
     },
 
     address: {
       type: String,
-      required: true,
       trim: true,
     },
     country: {
       type: String,
-      required: true,
       trim: true,
     },
     state: {
       type: String,
-      required: true,
       trim: true,
     },
     city: {
       type: String,
-      required: true,
       trim: true,
     },
 
     // Facility Description & Branding
     description: {
       type: String,
-      required: true,
       maxlength: 1000,
       trim: true,
     },
     externalWebsite: {
       type: String,
-      validate: {
-        validator: (v) => !v || validator.isURL(v),
-        message: 'Invalid URL format',
-      },
     },
     imageGallery: {
       type: [String],
@@ -164,7 +141,6 @@ const trainingFacilitySchema = new mongoose.Schema(
     facilityStatus: {
       type: String,
       enum: ['Active', 'Suspended'],
-      required: true,
       default: 'Active',
     },
     isDraft: {
@@ -174,7 +150,6 @@ const trainingFacilitySchema = new mongoose.Schema(
     adminApproveStatus: {
       type: String,
       enum: ['Pending', 'Approved', 'Rejected'],
-      required: true,
       default: 'Pending',
     },
     isAdminApprovalRequired: {
