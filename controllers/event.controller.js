@@ -213,7 +213,7 @@ exports.updateEvent = async (req, res) => {
 
 exports.deleteEvent = async (req, res) => {
   try {
-    const { id: userId } = req.user
+    const { id: userId ,role} = req.user
     const { id } = req.params
 
     const event = await Event.findById(id)
@@ -224,7 +224,7 @@ exports.deleteEvent = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
-    if (event.createdBy.toString() !== userId) {
+    if (role !== roles.superAdmin) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to delete this event',
