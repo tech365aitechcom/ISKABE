@@ -82,6 +82,48 @@ exports.getAllRules = async (req, res) => {
   }
 }
 
+exports.getActiveRules = async (req, res) => {
+  try {
+    const { category, subTab, search, page = 1, limit = 10 } = req.query
+    const filter = { status: 'Active' }
+
+    if (category) filter.category = category
+    if (subTab) filter.subTab = subTab
+    if (search) {
+      filter.$or = [{ ruleTitle: { $regex: search, $options: 'i' } }]
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+    const total = await Rules.countDocuments(filter)
+
+    const rules = await Rules.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate(
+        'createdBy',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
+      .sort({ createdAt: -1 })
+
+    res.json({
+      success: true,
+      message: 'Active rules list fetched',
+      data: {
+        items: rules,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error fetching active rules' })
+  }
+}
+
 exports.getRulesById = async (req, res) => {
   try {
     const rule = await Rules.findById(req.params.id).populate(
