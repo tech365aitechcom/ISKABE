@@ -1,5 +1,6 @@
 const { roles } = require('../constant')
 const AboutUs = require('../models/aboutUs.model')
+const HomepageConfig = require('../models/homeSetting.model')
 
 exports.createAboutUs = async (req, res) => {
   try {
@@ -52,8 +53,10 @@ exports.getAboutUs = async (req, res) => {
 
 exports.getFooterConfig = async (req, res) => {
   try {
-    // Fetch only logo and menuItems fields
-    const data = await AboutUs.findOne()
+    // Fetch only specific fields from HomepageConfig
+    const homepageData = await HomepageConfig.findOne().select('logo').lean()
+
+    const aboutUsData = await AboutUs.findOne()
       .select(
         'facebookURL instagramURL twitterURL termsConditionsPDF privacyPolicyPDF copyrightNoticePDF'
       )
@@ -61,7 +64,10 @@ exports.getFooterConfig = async (req, res) => {
 
     res.json({
       success: true,
-      data,
+      data: {
+        logo: homepageData?.logo || null,
+        ...aboutUsData,
+      },
     })
   } catch (err) {
     res.status(500).json({ success: false, message: err.message })
