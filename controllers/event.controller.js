@@ -2,6 +2,9 @@ const { roles } = require('../constant')
 const Event = require('../models/event.model')
 const Venue = require('../models/venue.model')
 const Registration = require('../models/registration.model')
+const Bracket = require('../models/bracket.model')
+const Bout = require('../models/bout.model')
+const Fight = require('../models/fight.model')
 
 exports.createEvent = async (req, res) => {
   try {
@@ -175,71 +178,6 @@ exports.getAllEvents = async (req, res) => {
   }
 }
 
-exports.updateEvent = async (req, res) => {
-  try {
-    const { id: userId } = req.user
-    const { id } = req.params
-
-    const event = await Event.findById(id)
-
-    if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Event not found' })
-    }
-
-    if (event.createdBy.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to update this event',
-      })
-    }
-
-    const updatedEvent = await Event.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    })
-
-    res.json({
-      success: true,
-      message: 'Event updated successfully',
-      data: updatedEvent,
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Error updating event' })
-  }
-}
-
-exports.deleteEvent = async (req, res) => {
-  try {
-    const { id: userId ,role} = req.user
-    const { id } = req.params
-
-    const event = await Event.findById(id)
-
-    if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Event not found' })
-    }
-
-    if (role !== roles.superAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to delete this event',
-      })
-    }
-
-    await event.deleteOne() // ✅ replaces event.remove()
-
-    res.json({ success: true, message: 'Event deleted successfully' })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Error deleting event' })
-  }
-}
-
 exports.getEventById = async (req, res) => {
   try {
     const { id } = req.params
@@ -338,3 +276,120 @@ exports.toggleEventStatus = async (req, res) => {
     res.status(500).json({ error: 'Error toggling event status' })
   }
 }
+
+exports.updateEvent = async (req, res) => {
+  try {
+    const { id: userId } = req.user
+    const { id } = req.params
+
+    const event = await Event.findById(id)
+
+    if (!event) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Event not found' })
+    }
+
+    if (event.createdBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to update this event',
+      })
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    })
+
+    res.json({
+      success: true,
+      message: 'Event updated successfully',
+      data: updatedEvent,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error updating event' })
+  }
+}
+
+exports.deleteEvent = async (req, res) => {
+  try {
+    const { role } = req.user
+    const { id } = req.params
+
+    const event = await Event.findById(id)
+
+    if (!event) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Event not found' })
+    }
+
+    if (role !== roles.superAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to delete this event',
+      })
+    }
+
+    await event.deleteOne()
+
+    res.json({ success: true, message: 'Event deleted successfully' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error deleting event' })
+  }
+}
+
+// exports.deleteEvent = async (req, res) => {
+//   try {
+//     const { role } = req.user
+//     const { id } = req.params
+
+//     const event = await Event.findById(id)
+
+//     if (!event) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: 'Event not found' })
+//     }
+
+//     if (role !== roles.superAdmin) {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'You are not authorized to delete this event',
+//       })
+//     }
+
+//     // Find all brackets under this event
+//     const brackets = await Bracket.find({ event: id })
+
+//     for (const bracket of brackets) {
+//       // Delete all bouts under this bracket
+//       const bouts = await Bout.find({ bracket: bracket._id })
+
+//       for (const bout of bouts) {
+//         // Delete fights under each bout
+//         await Fight.deleteMany({ bout: bout._id })
+//       }
+
+//       // Delete all bouts
+//       await Bout.deleteMany({ bracket: bracket._id })
+//     }
+
+//     // Delete all brackets under the event
+//     await Bracket.deleteMany({ event: id })
+
+//     // Finally delete the event
+//     await event.deleteOne()
+
+//     res.json({
+//       success: true,
+//       message: 'Event deleted successfully',
+//     })
+//   } catch (error) {
+//     console.error(error)
+//     res.status(500).json({ error: 'Error deleting event' })
+//   }
+// }

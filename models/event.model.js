@@ -166,6 +166,14 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    tournamentSettings: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TournamentSettings',
+    },
+    spectatorTicketConfig: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SpectatorTicket',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
