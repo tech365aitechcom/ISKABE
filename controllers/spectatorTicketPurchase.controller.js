@@ -20,6 +20,7 @@ exports.buySpectatorTicket = async (req, res) => {
       user,
       guestDetails,
       paymentMethod,
+      paymentStatus,
       cashCode: cashCodeText,
     } = req.body
 
@@ -86,14 +87,17 @@ exports.buySpectatorTicket = async (req, res) => {
       }
 
       cashCodeDoc = await CashCode.findOne({ code: cashCodeText })
+      if (!cashCodeDoc) {
+        return res.status(400).json({ message: 'Invalid cash code' })
+      }
+
       if (
-        !cashCodeDoc ||
         cashCodeDoc.redemptionStatus === 'Checked-In' ||
         cashCodeDoc.redeemedAt
       ) {
         return res
           .status(400)
-          .json({ message: 'Invalid or already used cash code' })
+          .json({ message: 'Cash code has already been redeemed' })
       }
 
       if (cashCodeDoc.event.toString() !== eventId) {
@@ -144,7 +148,7 @@ exports.buySpectatorTicket = async (req, res) => {
       guestDetails: buyerType === 'guest' ? guestDetails : undefined,
       totalAmount,
       paymentMethod,
-      paymentStatus: paymentMethod === 'cash' ? 'Pending' : 'Paid',
+      paymentStatus,
       cashCode: cashCodeDoc?._id || null,
       ticketCode,
       qrCode: qrCodeBuffer,
