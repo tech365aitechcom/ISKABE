@@ -47,12 +47,12 @@ const ticketTierSchema = new mongoose.Schema(
     salesStartDate: {
       type: Date,
       required: true,
-      validate: {
-        validator: function (v) {
-          return !v || v >= new Date()
-        },
-        message: 'Sales start date must be today or later',
-      },
+      // validate: {
+      //   validator: function (v) {
+      //     return !v || v >= new Date()
+      //   },
+      //   message: 'Sales start date must be today or later',
+      // },
     },
     salesEndDate: {
       type: Date,

@@ -77,8 +77,13 @@ const registrationSchema = new mongoose.Schema(
     purchase: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Purchase',
+      default: null,
     },
-    cashCode: String,
+    cashCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CashCode',
+      default: null,
+    },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
