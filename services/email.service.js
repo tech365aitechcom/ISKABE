@@ -93,7 +93,7 @@ exports.sendTicketConfirmationEmail = async ({
   }
 
   const mailOptions = {
-    from: 'no-reply@ikffightplatform.com',
+    from: config.email.from,
     to,
     subject: `IKF Event Ticket Summary`,
     html: `

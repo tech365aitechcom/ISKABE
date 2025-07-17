@@ -175,7 +175,7 @@ exports.buySpectatorTicket = async (req, res) => {
       to: recipientEmail,
       name: guestDetails?.firstName || userDoc?.firstName || 'Spectator',
       eventTitle: event.name,
-      eventLink: `https://ikffe.vercel.app/event/${eventId}`,
+      eventLink: `https://ikffe.vercel.app/events/${eventId}`,
       purchaseDate: new Date().toISOString(),
       tierTitle: tierName,
       quantity,
@@ -188,6 +188,7 @@ exports.buySpectatorTicket = async (req, res) => {
       success: true,
       message:
         'Ticket purchased successfully,Please check your email for details',
+      data: purchase,
     })
   } catch (error) {
     console.error(error)
