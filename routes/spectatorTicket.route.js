@@ -13,5 +13,23 @@ router.delete('/:eventId', spectatorTicketController.deleteSpectatorTicket)
 
 // Spectator Ticket Purchase
 router.post('/purchase', spectatorTicketPurchaseController.buySpectatorTicket)
+router.post(
+  '/redeem',
+  protect,
+  spectatorTicketPurchaseController.redeemSpectatorTicket
+)
+router.get(
+  '/purchase/user',
+  protect,
+  spectatorTicketPurchaseController.getTicketsByUser
+)
+router.get(
+  '/purchase/:ticketCode',
+  spectatorTicketPurchaseController.getTicketByCode
+)
+router.get(
+  '/purchase/event/:eventId',
+  spectatorTicketPurchaseController.getEventPurchases
+)
 
 module.exports = router

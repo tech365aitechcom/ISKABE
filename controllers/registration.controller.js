@@ -176,6 +176,48 @@ exports.getRegistrations = async (req, res) => {
   }
 }
 
+exports.getRegistrationsByEventId = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { registrationType, page = 1, limit = 10 } = req.query
+    const filter = {}
+    filter.event = eventId
+
+    if (registrationType) {
+      filter.registrationType = registrationType
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const total = await Registration.countDocuments(filter)
+
+    const registrations = await Registration.find(filter)
+      .populate(
+        'createdBy',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
+      .skip(skip)
+      .limit(parseInt(limit))
+
+    res.json({
+      success: true,
+      message: 'Registrations list fetched',
+      data: {
+        items: registrations,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error fetching registrations' })
+  }
+}
+
 exports.getRegistrationById = async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id).populate(

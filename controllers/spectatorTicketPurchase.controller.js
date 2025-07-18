@@ -197,3 +197,167 @@ exports.buySpectatorTicket = async (req, res) => {
       .json({ message: 'Internal server error', error: error.message })
   }
 }
+
+exports.redeemSpectatorTicket = async (req, res) => {
+  try {
+    const { ticketCode, quantityToRedeem, entryMode = 'Manual' } = req.body
+    const { id: userId } = req.user
+
+    if (!ticketCode || !quantityToRedeem) {
+      return res
+        .status(400)
+        .json({ message: 'Ticket code and quantity are required' })
+    }
+
+    const ticketPurchase = await SpectatorTicketPurchase.findOne({ ticketCode })
+
+    if (!ticketPurchase) {
+      return res.status(404).json({ message: 'Ticket not found' })
+    }
+
+    if (ticketPurchase.redemptionStatus === 'Redeemed') {
+      return res.status(400).json({ message: 'Ticket already fully redeemed' })
+    }
+
+    const remainingToRedeem =
+      ticketPurchase.quantity - ticketPurchase.redeemedQuantity
+
+    if (quantityToRedeem > remainingToRedeem) {
+      return res.status(400).json({
+        message: `Only ${remainingToRedeem} ticket(s) remaining to redeem`,
+      })
+    }
+
+    // Update fields
+    ticketPurchase.redeemedQuantity += quantityToRedeem
+
+    if (ticketPurchase.redeemedQuantity === ticketPurchase.quantity) {
+      ticketPurchase.redemptionStatus = 'Redeemed'
+      ticketPurchase.redeemedAt = new Date()
+    } else {
+      ticketPurchase.redemptionStatus = 'Partially Redeemed'
+    }
+
+    // Log this redemption
+    ticketPurchase.redemptionLogs.push({
+      redeemedAt: new Date(),
+      redeemedBy: userId,
+      quantity: quantityToRedeem,
+      method: entryMode,
+    })
+
+    // Save who last redeemed and how
+    ticketPurchase.redeemedBy = userId
+    ticketPurchase.entryMode = entryMode
+
+    await ticketPurchase.save()
+
+    return res.status(200).json({
+      success: true,
+      message: `${quantityToRedeem} ticket(s) redeemed successfully`,
+      updatedStatus: ticketPurchase.redemptionStatus,
+      remaining: ticketPurchase.quantity - ticketPurchase.redeemedQuantity,
+    })
+  } catch (error) {
+    console.error(error)
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message })
+  }
+}
+
+exports.getTicketByCode = async (req, res) => {
+  try {
+    const { ticketCode } = req.params
+
+    const ticket = await SpectatorTicketPurchase.findOne({
+      ticketCode,
+    }).populate('event ticket user')
+
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Ticket found successfully',
+      data: ticket,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+exports.getTicketsByUser = async (req, res) => {
+  try {
+    const { id: userId } = req.user
+    const { page = 1, limit = 10 } = req.query
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const filter = { user: userId }
+
+    const total = await SpectatorTicketPurchase.countDocuments(filter)
+
+    const tickets = await SpectatorTicketPurchase.find(filter)
+      .populate('event')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        items: tickets,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+exports.getEventPurchases = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { page = 1, limit = 10 } = req.query
+
+    const parsedPage = parseInt(page)
+    const parsedLimit = parseInt(limit)
+    const skip = (parsedPage - 1) * parsedLimit
+
+    const filter = { event: eventId }
+
+    const total = await SpectatorTicketPurchase.countDocuments(filter)
+
+    const purchases = await SpectatorTicketPurchase.find(filter)
+      .populate('user')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parsedLimit)
+
+    return res.status(200).json({
+      success: true,
+      message: 'Purchases fetched successfully',
+      data: {
+        items: purchases,
+        pagination: {
+          totalItems: total,
+          currentPage: parsedPage,
+          totalPages: Math.ceil(total / parsedLimit),
+          pageSize: parsedLimit,
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Internal server error' })
+  }
+}

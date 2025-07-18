@@ -1,5 +1,28 @@
 const mongoose = require('mongoose')
 
+const redemptionLogSchema = new mongoose.Schema(
+  {
+    redeemedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    redeemedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
+    method: {
+      type: String,
+      enum: ['QR', 'Manual'],
+      default: 'Manual',
+    },
+  },
+  { _id: false }
+)
+
 const spectatorTicketPurchaseSchema = new mongoose.Schema(
   {
     event: {
@@ -64,18 +87,33 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
       type: String,
     },
     ticketCode: {
-      type: String, // 4-digit alphanumeric or unique token
+      type: String,
       required: true,
       unique: true,
     },
     redemptionStatus: {
       type: String,
-      enum: ['Not Redeemed', 'Redeemed'],
+      enum: ['Not Redeemed', 'Partially Redeemed', 'Redeemed'],
       default: 'Not Redeemed',
+    },
+    redeemedQuantity: {
+      type: Number,
+      default: 0,
     },
     redeemedAt: {
       type: Date,
     },
+    redeemedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    entryMode: {
+      type: String,
+      enum: ['QR', 'Manual'],
+      default: 'Manual',
+    },
+    redemptionLogs: [redemptionLogSchema],
   },
   { timestamps: true }
 )
