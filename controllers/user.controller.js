@@ -35,10 +35,13 @@ exports.signup = async (req, res) => {
 
   try {
     // Check if email already exists
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return res.status(409).json({ message: 'Email already exists' })
-    }
+   const existingUser = await User.findOne({ email })
+if (existingUser) {
+  if (existingUser.isSuspended) {
+    return res.status(403).json({ message: 'This account has been suspended. You cannot register again with this email.' })
+  }
+  return res.status(409).json({ message: 'Email already exists' })
+}
 
     // Combine date of birth
     const dateOfBirth = new Date(`${dobYear}-${dobMonth}-${dobDay}`)
@@ -98,6 +101,11 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'Email not registered' })
     }
+
+    if (user.isSuspended) {
+  return res.status(403).json({ message: 'Your account has been suspended by the admin.' });
+}
+
 
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {

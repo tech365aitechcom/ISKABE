@@ -109,6 +109,11 @@ const userSchema = new mongoose.Schema(
     },
 
     isVerified: { type: Boolean, default: false },
+    isSuspended: {
+      type: Boolean,
+      default: false,
+    },
+
     verificationToken: String,
     verificationTokenExpiry: Date,
     resetPasswordToken: String,
