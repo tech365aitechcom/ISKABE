@@ -22,6 +22,7 @@ exports.buySpectatorTicket = async (req, res) => {
       paymentMethod,
       paymentStatus,
       cashCode: cashCodeText,
+      transactionId,
     } = req.body
 
     if (!eventId || !tierName || !quantity || !buyerType || !paymentMethod) {
@@ -150,6 +151,7 @@ exports.buySpectatorTicket = async (req, res) => {
       paymentMethod,
       paymentStatus,
       cashCode: cashCodeDoc?._id || null,
+      transactionId: paymentMethod === 'cash' ? null : transactionId,
       ticketCode,
       qrCode: qrCodeBuffer,
     })

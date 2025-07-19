@@ -80,6 +80,7 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
     },
     transactionId: {
       type: String,
+      default: null,
     },
     qrCode: {
       type: String,
