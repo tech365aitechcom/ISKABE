@@ -74,10 +74,8 @@ const registrationSchema = new mongoose.Schema(
       type: String,
       enum: ['cash', 'card'],
     },
-    purchase: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Purchase',
-      default: null,
+    transactionId: {
+      type: String,
     },
     cashCode: {
       type: mongoose.Schema.Types.ObjectId,

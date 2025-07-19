@@ -78,10 +78,8 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
       ref: 'CashCode',
       default: null,
     },
-    purchase: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Purchase',
-      default: null,
+    transactionId: {
+      type: String,
     },
     qrCode: {
       type: String,
