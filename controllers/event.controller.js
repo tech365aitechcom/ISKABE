@@ -5,6 +5,7 @@ const Registration = require('../models/registration.model')
 const Bracket = require('../models/bracket.model')
 const Bout = require('../models/bout.model')
 const Fight = require('../models/fight.model')
+const TournamentSettings = require('../models/tournamentSettings.model')
 
 exports.createEvent = async (req, res) => {
   try {
@@ -24,7 +25,28 @@ exports.createEvent = async (req, res) => {
 
     await event.save()
 
+    const tournamentSettings = new TournamentSettings({
+      eventId: event._id,
+      createdBy: userId,
+      simpleFees: {
+        fighterFee: 0,
+        trainerFee: 0,
+        currency: '$',
+      },
+      detailedFees: [],
+      bracketSettings: {
+        maxFightersPerBracket: 0,
+      },
+      ruleStyles: {
+        semiContact: [],
+        fullContact: [],
+      },
+    })
+
+    await tournamentSettings.save()
+
     res.status(201).json({
+      success: true,
       message: 'Event created successfully',
       data: event,
     })
@@ -43,7 +65,6 @@ exports.createEvent = async (req, res) => {
     // Validation errors (including CastError and custom validators)
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((err) => {
-        // Clean up ObjectId Cast errors
         if (
           err.name === 'CastError' &&
           err.kind === 'ObjectId' &&
@@ -333,63 +354,35 @@ exports.deleteEvent = async (req, res) => {
       })
     }
 
+    // Find all brackets under this event
+    const brackets = await Bracket.find({ event: id })
+
+    for (const bracket of brackets) {
+      // Delete all bouts under this bracket
+      const bouts = await Bout.find({ bracket: bracket._id })
+
+      for (const bout of bouts) {
+        // Delete fights under each bout
+        await Fight.deleteMany({ bout: bout._id })
+      }
+
+      // Delete all bouts
+      await Bout.deleteMany({ bracket: bracket._id })
+    }
+
+    // Delete all brackets under the event
+    await Bracket.deleteMany({ event: id })
+    await TournamentSettings.deleteOne({ eventId: id })
+
+    // Finally delete the event
     await event.deleteOne()
 
-    res.json({ success: true, message: 'Event deleted successfully' })
+    res.json({
+      success: true,
+      message: 'Event deleted successfully',
+    })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Error deleting event' })
   }
 }
-
-// exports.deleteEvent = async (req, res) => {
-//   try {
-//     const { role } = req.user
-//     const { id } = req.params
-
-//     const event = await Event.findById(id)
-
-//     if (!event) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: 'Event not found' })
-//     }
-
-//     if (role !== roles.superAdmin) {
-//       return res.status(403).json({
-//         success: false,
-//         message: 'You are not authorized to delete this event',
-//       })
-//     }
-
-//     // Find all brackets under this event
-//     const brackets = await Bracket.find({ event: id })
-
-//     for (const bracket of brackets) {
-//       // Delete all bouts under this bracket
-//       const bouts = await Bout.find({ bracket: bracket._id })
-
-//       for (const bout of bouts) {
-//         // Delete fights under each bout
-//         await Fight.deleteMany({ bout: bout._id })
-//       }
-
-//       // Delete all bouts
-//       await Bout.deleteMany({ bracket: bracket._id })
-//     }
-
-//     // Delete all brackets under the event
-//     await Bracket.deleteMany({ event: id })
-
-//     // Finally delete the event
-//     await event.deleteOne()
-
-//     res.json({
-//       success: true,
-//       message: 'Event deleted successfully',
-//     })
-//   } catch (error) {
-//     console.error(error)
-//     res.status(500).json({ error: 'Error deleting event' })
-//   }
-// }

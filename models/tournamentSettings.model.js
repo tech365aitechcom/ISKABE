@@ -70,7 +70,6 @@ const TournamentSettingsSchema = new mongoose.Schema(
       maxFightersPerBracket: {
         type: Number,
         required: true,
-        min: 1,
       },
     },
 
