@@ -1,5 +1,6 @@
 const { roles } = require('../constant')
 const Suspension = require('../models/suspension.model')
+const User = require('../models/user.model')
 
 exports.createSuspension = async (req, res) => {
   try {
@@ -28,6 +29,10 @@ exports.createSuspension = async (req, res) => {
     })
 
     await newSuspension.save()
+
+    await User.findByIdAndUpdate(person, { isSuspended: true })
+
+
 
     res.status(201).json({
       success: true,
