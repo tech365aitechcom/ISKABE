@@ -74,3 +74,81 @@ exports.sendForgotPasswordEmail = async (email, resetLink) => {
     throw error // Re-throw to be handled by the controller
   }
 }
+
+exports.sendTicketConfirmationEmail = async ({
+  to,
+  name,
+  eventTitle,
+  eventLink,
+  purchaseDate,
+  tierTitle,
+  quantity,
+  totalAmount,
+  ticketCode,
+  qrCodeBuffer,
+}) => {
+  if (!to || !ticketCode || !qrCodeBuffer) {
+    console.warn('Missing required fields for sending ticket email')
+    return
+  }
+
+  const mailOptions = {
+    from: config.email.from,
+    to,
+    subject: `IKF Event Ticket Summary`,
+    html: `
+      <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;border:1px solid #ddd;">
+        <div style="background-color:#000;color:#fff;padding:20px;text-align:center;">
+          <h2>IKF FIGHT PLATFORM</h2>
+          <p>Your Spectator Ticket</p>
+        </div>
+        <div style="padding:20px;color:#000;">
+          <p>Hi ${name || 'guest'},</p>
+          <p>You purchased ${quantity} ticket(s) for the following event: 
+            <a href="${eventLink}" style="color:#0000ee;">${eventTitle}</a>
+          </p>
+          <div style="text-align:center;margin:20px 0;">
+            <img src="cid:qrCode123" alt="QR Code" style="width:200px;height:200px;" />
+          </div>
+
+          <p style="font-size:14px;">You can also show the following code to the official(s) at the gate to gain entry:</p>
+          <h3 style="text-align:center;color:#FF9900;">${ticketCode}</h3>
+
+          <p style="font-size:12px;">
+            Note that your code can only be used by you, only once, and only for this event.
+            You may be required to identify your email address at the door.
+          </p>
+
+          <h4>Purchase Summary:</h4>
+          <ul style="font-size:14px;list-style:none;padding-left:0;">
+            <li><strong>Purchase Date:</strong> ${purchaseDate}</li>
+            <li><strong>Total Paid:</strong> ₹${totalAmount}</li>
+            <li><strong>Ticket Type:</strong> ${tierTitle} (${quantity} @ ₹${(
+      totalAmount / quantity
+    ).toFixed(2)} each)</li>
+          </ul>
+
+          <p style="font-size:12px;margin-top:20px;">
+            If you have any questions, contact us at <a href="mailto:ikffightplatform@gmail.com">ikffightplatform@gmail.com</a>.
+          </p>
+          <p style="font-size:12px;">Thank you!<br/>The IKF Fight Platform Team</p>
+        </div>
+      </div>
+    `,
+    attachments: [
+      {
+        filename: 'ticket-qr.png',
+        content: qrCodeBuffer,
+        cid: 'qrCode123',
+      },
+    ],
+  }
+
+  try {
+    await transporter.sendMail(mailOptions)
+    console.log(`Ticket email sent to ${to}`)
+  } catch (error) {
+    console.error('Error sending ticket email:', error)
+    throw error
+  }
+}

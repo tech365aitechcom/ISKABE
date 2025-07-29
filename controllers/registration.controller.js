@@ -1,12 +1,71 @@
 const Registration = require('../models/registration.model')
 const Event = require('../models/event.model')
+const CashCode = require('../models/cashCode.model')
+const { roles } = require('../constant')
+const FighterProfile = require('../models/fighterProfile.model')
+const TrainerProfile = require('../models/TrainerProfile.model')
+const { default: mongoose } = require('mongoose')
 
 exports.createRegistration = async (req, res) => {
   try {
-    const { id: userId } = req.user
+    const { id: userId, role } = req.user
+    const { cashCode: codeFromBody, event: eventId } = req.body
+    let resolvedCashCode = null
+
+    if (codeFromBody) {
+      const cashCodeDoc = await CashCode.findOne({ code: codeFromBody })
+      if (!cashCodeDoc) {
+        return res.status(400).json({ message: 'Invalid cash code' })
+      }
+
+      if (
+        cashCodeDoc.redemptionStatus === 'Checked-In' ||
+        cashCodeDoc.redeemedAt
+      ) {
+        return res
+          .status(400)
+          .json({ message: 'Cash code has already been redeemed' })
+      }
+
+      if (cashCodeDoc.event.toString() !== eventId) {
+        return res
+          .status(400)
+          .json({ message: 'Cash code does not belong to this event' })
+      }
+
+      let cashCodeUser = null
+      if (cashCodeDoc.user) {
+        if (role === roles.fighter) {
+          const fighter = await FighterProfile.findOne({
+            userId: new mongoose.Types.ObjectId(userId),
+          })
+          cashCodeUser = fighter._id
+        } else if (role === roles.trainer) {
+          const trainer = await TrainerProfile.findOne({
+            userId: new mongoose.Types.ObjectId(userId),
+          })
+          cashCodeUser = trainer._id
+        } else {
+          cashCodeUser = cashCodeDoc.user
+        }
+        if (!cashCodeDoc.user.equals(cashCodeUser)) {
+          return res.status(400).json({
+            message: 'Cash code is not assigned to this user',
+          })
+        }
+      }
+
+      // Mark the cash code as redeemed
+      cashCodeDoc.redemptionStatus = 'Checked-In'
+      cashCodeDoc.redeemedAt = Date.now()
+      await cashCodeDoc.save()
+
+      resolvedCashCode = cashCodeDoc._id
+    }
 
     const registration = new Registration({
       ...req.body,
+      cashCode: resolvedCashCode || null,
       createdBy: userId,
     })
 
@@ -107,6 +166,48 @@ exports.getRegistrations = async (req, res) => {
           totalItems: registrations.length,
           currentPage: parseInt(page),
           totalPages: Math.ceil(registrations.length / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error fetching registrations' })
+  }
+}
+
+exports.getRegistrationsByEventId = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { registrationType, page = 1, limit = 10 } = req.query
+    const filter = {}
+    filter.event = eventId
+
+    if (registrationType) {
+      filter.registrationType = registrationType
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const total = await Registration.countDocuments(filter)
+
+    const registrations = await Registration.find(filter)
+      .populate(
+        'createdBy',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
+      .skip(skip)
+      .limit(parseInt(limit))
+
+    res.json({
+      success: true,
+      message: 'Registrations list fetched',
+      data: {
+        items: registrations,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
           pageSize: parseInt(limit),
         },
       },
