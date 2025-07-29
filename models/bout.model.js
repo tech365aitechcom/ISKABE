@@ -18,6 +18,10 @@ const boutSchema = new mongoose.Schema(
     numberOfRounds: Number,
     roundDuration: Number,
     notes: String,
+    startDate: {
+      type: Date,
+      required: true,
+    },
     redCorner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'FighterProfile',

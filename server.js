@@ -31,6 +31,7 @@ const bracketRoutes = require('./routes/bracket.route')
 const boutRoutes = require('./routes/bout.route')
 const fightRoutes = require('./routes/fight.route')
 const cashCodeRoutes = require('./routes/cashCode.route')
+const dashboardRoutes = require('./routes/dashboard.route')
 
 app.use(cors())
 app.use(express.json())
@@ -63,6 +64,7 @@ app.use('/api/brackets', bracketRoutes)
 app.use('/api/bouts', boutRoutes)
 app.use('/api/fights', fightRoutes)
 app.use('/api/cash-code', cashCodeRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 // Define a test route
 app.get('/', (req, res) => {
