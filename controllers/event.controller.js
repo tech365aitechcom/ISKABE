@@ -56,9 +56,8 @@ exports.createEvent = async (req, res) => {
     // Duplicate key error
     if (error.code === 11000) {
       const duplicatedField = Object.keys(error.keyPattern || {})[0]
-      const message = `${
-        duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
-      } already exists. Please choose another.`
+      const message = `${duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
+        } already exists. Please choose another.`
       return res.status(400).json({ error: message })
     }
 
@@ -265,6 +264,83 @@ exports.getEventById = async (req, res) => {
   }
 }
 
+
+exports.updateEvent = async (req, res) => {
+  try {
+    const { id: userId, role } = req.user
+    const { id } = req.params
+
+    const event = await Event.findById(id)
+
+    if (!event) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Event not found' })
+    }
+
+      // Allow superAdmin to edit any event, or creator to edit
+ 
+    if (role !== roles.superAdmin && event.createdBy.toString()
+      !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to update this event',
+      })
+    }
+
+      // Update the event fields and save (this preserves validation     
+  
+    Object.assign(event, req.body)
+    const updatedEvent = await event.save()
+
+    res.json({
+      success: true,
+      message: 'Event updated successfully',
+      data: updatedEvent,
+    })
+  } catch (error) {
+    console.error('Update event error:', error)
+
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err =>
+        err.message)
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', '),
+        details: error.errors
+      })
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const duplicatedField = Object.keys(error.keyPattern ||
+        {})[0]
+      const message = `${duplicatedField.charAt(0).toUpperCase() +
+        duplicatedField.slice(1)} already exists`
+      return res.status(400).json({
+        success: false,
+        error: message
+      })
+    }
+
+    // Handle cast errors (invalid ObjectId)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid ${error.path}: ${error.value}`
+      })
+    }
+
+    // Generic server error
+    res.status(500).json({
+      success: false,
+      error: 'Error updating event',
+      message: error.message
+    })
+  }
+}
+
 exports.toggleEventStatus = async (req, res) => {
   try {
     const { id: userId } = req.user
@@ -298,41 +374,7 @@ exports.toggleEventStatus = async (req, res) => {
   }
 }
 
-exports.updateEvent = async (req, res) => {
-  try {
-    const { id: userId } = req.user
-    const { id } = req.params
 
-    const event = await Event.findById(id)
-
-    if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Event not found' })
-    }
-
-    if (event.createdBy.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'You are not authorized to update this event',
-      })
-    }
-
-    const updatedEvent = await Event.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    })
-
-    res.json({
-      success: true,
-      message: 'Event updated successfully',
-      data: updatedEvent,
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Error updating event' })
-  }
-}
 
 exports.deleteEvent = async (req, res) => {
   try {
@@ -386,3 +428,14 @@ exports.deleteEvent = async (req, res) => {
     res.status(500).json({ error: 'Error deleting event' })
   }
 }
+
+
+
+
+
+
+
+
+
+
+
