@@ -77,6 +77,14 @@ const registrationSchema = new mongoose.Schema(
     transactionId: {
       type: String,
     },
+    paymentNotes: {
+      type: String,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['Paid', 'Pending', 'Failed'],
+      default: 'Pending',
+    },
     cashCode: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CashCode',
@@ -91,6 +99,37 @@ const registrationSchema = new mongoose.Schema(
       type: String,
       enum: ['Pending', 'Rejected', 'Verified'],
       default: 'Pending',
+    },
+    weighInDate: {
+      type: Date,
+    },
+    checkInStatus: {
+      type: String,
+      enum: ['Checked In', 'Not Checked', 'No Show'],
+      default: 'Not Checked',
+    },
+    medicalExamDone: {
+      type: Boolean,
+      default: false,
+    },
+    physicalRenewalDate: {
+      type: Date,
+    },
+    licenseRenewalDate: {
+      type: Date,
+    },
+    hotelConfirmationNumber: {
+      type: String,
+    },
+    lastEvent: {
+      type: String,
+    },
+    skillRank: {
+      type: String,
+    },
+    parentalConsentUploaded: {
+      type: Boolean,
+      default: false,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
