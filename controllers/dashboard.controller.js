@@ -271,6 +271,128 @@ exports.getDashboardData = async (req, res) => {
           : '0.00',
     }
 
+    // 13. Upcoming Events
+
+    const rawUpcomingEvents = await Event.find({
+      startDate: { $gte: new Date() },
+      isDraft: false,
+    })
+      .sort({ startDate: 1 })
+      .select('name startDate endDate venue poster')
+      .populate('venue', 'name address')
+      .lean()
+
+    const eventIds = rawUpcomingEvents.map((event) => event._id)
+
+    const fighterCounts = await Registration.aggregate([
+      {
+        $match: {
+          event: { $in: eventIds },
+          registrationType: 'fighter',
+          status: 'Verified',
+        },
+      },
+      {
+        $group: {
+          _id: '$event',
+          count: { $sum: 1 },
+        },
+      },
+    ])
+
+    const fighterCountMap = fighterCounts.reduce((acc, cur) => {
+      acc[cur._id.toString()] = cur.count
+      return acc
+    }, {})
+
+    const upcomingEvents = rawUpcomingEvents.map((event) => ({
+      ...event,
+      registeredFighters: fighterCountMap[event._id.toString()] || 0,
+    }))
+
+    // 14. Recent Fighter Registrations
+    const recentFighterRegistrations = await Registration.find({
+      registrationType: 'fighter',
+      status: 'Verified',
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('event')
+
+    // 15. Bouts Missing Results
+    const boutsMissingResults = await Bout.find({ fight: null })
+      .sort({ startDate: -1 })
+      .limit(10)
+      .select('startDate redCorner blueCorner event')
+      .populate({
+        path: 'redCorner',
+        populate: {
+          path: 'userId',
+          model: 'User',
+          select: 'firstName lastName',
+        },
+      })
+      .populate({
+        path: 'blueCorner',
+        populate: {
+          path: 'userId',
+          model: 'User',
+          select: 'firstName lastName',
+        },
+      })
+
+    // 16. Fighters with Alerts
+    const rawAlerts = await Registration.find({
+      registrationType: 'fighter',
+      $or: [
+        { medicalExamDone: false },
+        { physicalRenewalDate: { $lt: new Date() } },
+        { licenseRenewalDate: { $lt: new Date() } },
+        { status: { $ne: 'Verified' } },
+      ],
+    })
+      .select(
+        '_id firstName lastName status medicalExamDone physicalRenewalDate licenseRenewalDate'
+      )
+      .lean()
+
+    function isDateExpired(date) {
+      return date && new Date(date) < new Date()
+    }
+
+    const fightersWithAlerts = rawAlerts.map((fighter) => {
+      let issueType = null
+      let severity = 'Warning'
+
+      if (
+        fighter.medicalExamDone === false ||
+        isDateExpired(fighter.physicalRenewalDate)
+      ) {
+        issueType = 'Medical Expired'
+        severity = 'Critical'
+      } else if (isDateExpired(fighter.licenseRenewalDate)) {
+        issueType = 'License Expired'
+        severity = 'Warning'
+      } else if (fighter.status !== 'Verified') {
+        issueType = 'Documentation Incomplete'
+        severity = 'Warning'
+      }
+
+      return {
+        id: fighter._id, // Include the ID
+        name: `${fighter.firstName} ${fighter.lastName}`,
+        issueType,
+        status: severity,
+      }
+    })
+
+    // 17. Recent Spectator Ticket Purchases
+    const spectatorTicketLogs = await SpectatorTicketPurchase.find()
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .select('tier quantity totalAmount event')
+      .populate('event', 'name startDate')
+
     res.status(200).json({
       success: true,
       message: 'Dashboard data fetched successfully',
@@ -287,6 +409,11 @@ exports.getDashboardData = async (req, res) => {
         redemptionStats,
         weightClassDistribution,
         boutProgress,
+        upcomingEvents,
+        recentFighterRegistrations,
+        boutsMissingResults,
+        fightersWithAlerts,
+        spectatorTicketLogs,
       },
     })
   } catch (error) {
