@@ -14,17 +14,31 @@ exports.createBout = async (req, res) => {
       })
     }
 
+    const { bracket, boutNumber } = req.body
+
+    // Check for duplicate boutNumber within the same bracket
+    const existingBout = await Bout.findOne({ bracket, boutNumber })
+    if (existingBout) {
+      return res.status(400).json({
+        success: false,
+        message: `Bout number ${boutNumber} already exists in this bracket.`,
+      })
+    }
+
+    // Create and save the new bout
     const bout = new Bout(req.body)
     await bout.save()
 
-    // Push bout ID to bracket.bouts
-    await Bracket.findByIdAndUpdate(bout.bracket, {
+    // Push bout ID to bracket.bouts array
+    await Bracket.findByIdAndUpdate(bracket, {
       $push: { bouts: bout._id },
     })
 
-    res
-      .status(201)
-      .json({ success: true, message: 'Bout created successfully', data: bout })
+    res.status(201).json({
+      success: true,
+      message: 'Bout created successfully',
+      data: bout,
+    })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
   }
@@ -39,26 +53,12 @@ exports.getAllBouts = async (req, res) => {
 
     const bouts = await Bout.find(filter)
       .populate('bracket')
-      .populate({
-        path: 'redCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
-      .populate({
-        path: 'blueCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('redCorner')
+      .populate('blueCorner')
       .populate('fight')
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 })
+      .sort({ boutNumber: 1 })
 
     const count = await Bout.countDocuments(filter)
 
@@ -80,14 +80,8 @@ exports.getBoutById = async (req, res) => {
   try {
     const bout = await Bout.findById(req.params.id)
       .populate('bracket')
-      .populate({
-        path: 'redCorner',
-        populate: { path: 'userId', model: 'User' },
-      })
-      .populate({
-        path: 'blueCorner',
-        populate: { path: 'userId', model: 'User' },
-      })
+      .populate('redCorner')
+      .populate('blueCorner')
       .populate('fight')
 
     if (!bout) {

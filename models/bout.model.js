@@ -24,11 +24,11 @@ const boutSchema = new mongoose.Schema(
     },
     redCorner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'FighterProfile',
+      ref: 'Registration',
     },
     blueCorner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'FighterProfile',
+      ref: 'Registration',
     },
     fight: {
       type: mongoose.Schema.Types.ObjectId,

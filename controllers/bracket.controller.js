@@ -2,6 +2,7 @@ const { roles } = require('../constant')
 const Bracket = require('../models/bracket.model')
 const Bout = require('../models/bout.model')
 const Fight = require('../models/fight.model')
+const TournamentSettings = require('../models/tournamentSettings.model')
 
 exports.createBracket = async (req, res) => {
   try {
@@ -13,6 +14,30 @@ exports.createBracket = async (req, res) => {
         message: 'You are not allowed to create brackets.',
       })
     }
+
+    const { event, maxCompetitors } = req.body
+
+    // Fetch Tournament Settings for the event
+    const tournamentSettings = await TournamentSettings.findOne({
+      eventId: event,
+    })
+
+    if (!tournamentSettings) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tournament settings not found for the specified event.',
+      })
+    }
+
+    const maxAllowed = tournamentSettings.bracketSettings.maxFightersPerBracket
+
+    if (maxCompetitors > maxAllowed) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum competitors per bracket cannot exceed ${maxAllowed} as per tournament settings.`,
+      })
+    }
+
     const bracket = new Bracket({ ...req.body, createdBy: userId })
     await bracket.save()
 
@@ -26,7 +51,7 @@ exports.createBracket = async (req, res) => {
     res.status(400).json({
       success: false,
       message: 'Failed to create bracket',
-      error,
+      error: error.message,
     })
   }
 }
@@ -51,22 +76,8 @@ exports.getAllBrackets = async (req, res) => {
     // Dynamically fetch all bouts related to these brackets
     const bracketIds = brackets.map((b) => b._id)
     const allBouts = await Bout.find({ bracket: { $in: bracketIds } })
-      .populate({
-        path: 'redCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
-      .populate({
-        path: 'blueCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('redCorner')
+      .populate('blueCorner')
       .populate('fight')
       .lean()
 
@@ -118,22 +129,8 @@ exports.getBracketById = async (req, res) => {
 
     // Fetch bouts dynamically for this bracket
     const bouts = await Bout.find({ bracket: bracket._id })
-      .populate({
-        path: 'redCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
-      .populate({
-        path: 'blueCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('redCorner')
+      .populate('blueCorner')
       .populate('fight')
       .lean()
 
@@ -148,24 +145,43 @@ exports.getBracketById = async (req, res) => {
 
 exports.updateBracket = async (req, res) => {
   try {
-    const updatedBracket = await Bracket.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
-    )
+    const bracketId = req.params.id
+    const updateData = req.body
 
-    if (!updatedBracket) {
+    // Fetch the existing bracket to get current data
+    const existingBracket = await Bracket.findById(bracketId)
+    if (!existingBracket) {
       return res
         .status(404)
         .json({ success: false, message: 'Bracket not found' })
     }
 
+    // If fighters are being updated, validate against bracket.maxCompetitors
+    if (updateData.fighters && Array.isArray(updateData.fighters)) {
+      const maxAllowed = existingBracket.maxCompetitors
+
+      if (
+        typeof maxAllowed === 'number' &&
+        updateData.fighters.length > maxAllowed
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot add more than ${maxAllowed} fighters to this bracket.`,
+        })
+      }
+    }
+
+    // Proceed with update
+    const updatedBracket = await Bracket.findByIdAndUpdate(
+      bracketId,
+      updateData,
+      { new: true, runValidators: true }
+    )
+
     res.status(200).json({
       success: true,
       message: 'Bracket updated successfully',
+      data: updatedBracket,
     })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })

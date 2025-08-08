@@ -31,7 +31,14 @@ const bracketSchema = new mongoose.Schema(
     },
     title: {
       type: String,
-      enum: ['Championship', 'Exhibition', 'Local Championship'],
+      enum: [
+        'Championship',
+        'Exhibition',
+        'Local Championship',
+        'Regional Championship',
+        'National Championship',
+        'International Championship',
+      ],
     },
     status: {
       type: String,

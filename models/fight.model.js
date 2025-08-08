@@ -24,16 +24,19 @@ const fightSchema = new mongoose.Schema(
     },
     winner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'FighterProfile',
+      ref: 'Registration',
     },
     resultMethod: {
       type: String,
       enum: [
         'Decision',
-        'Knockout',
-        'Walkover',
-        'Disqualified',
+        'TKO',
+        'KO',
         'Draw',
+        'Disqualified',
+        'Forfeit',
+        'No Contest',
+        'Technical Decision',
         'Other',
       ],
     },
@@ -46,6 +49,7 @@ const fightSchema = new mongoose.Schema(
       red: [Number],
       blue: [Number],
     },
+    notes: String,
   },
   { timestamps: true }
 )

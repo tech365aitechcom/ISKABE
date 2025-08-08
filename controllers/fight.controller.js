@@ -49,14 +49,7 @@ exports.getAllFights = async (req, res) => {
     const total = await Fight.countDocuments(filter)
 
     const fights = await Fight.find(filter)
-      .populate({
-        path: 'winner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('winner')
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 })
