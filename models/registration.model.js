@@ -85,6 +85,10 @@ const registrationSchema = new mongoose.Schema(
       enum: ['Paid', 'Pending', 'Failed'],
       default: 'Pending',
     },
+    amount: {
+      type: Number,
+      default: 0,
+    },
     cashCode: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'CashCode',

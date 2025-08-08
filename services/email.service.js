@@ -122,8 +122,8 @@ exports.sendTicketConfirmationEmail = async ({
           <h4>Purchase Summary:</h4>
           <ul style="font-size:14px;list-style:none;padding-left:0;">
             <li><strong>Purchase Date:</strong> ${purchaseDate}</li>
-            <li><strong>Total Paid:</strong> ₹${totalAmount}</li>
-            <li><strong>Ticket Type:</strong> ${tierTitle} (${quantity} @ ₹${(
+            <li><strong>Total Paid:</strong> $${totalAmount}</li>
+            <li><strong>Ticket Type:</strong> ${tierTitle} (${quantity} @ $${(
       totalAmount / quantity
     ).toFixed(2)} each)</li>
           </ul>

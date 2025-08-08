@@ -355,11 +355,37 @@ exports.getEventPurchases = async (req, res) => {
       .skip(skip)
       .limit(parsedLimit)
 
+    // Calculate totals for all purchases in the event
+    const allPurchases = await SpectatorTicketPurchase.find(filter)
+    const totalCollected = allPurchases.reduce(
+      (sum, purchase) => sum + purchase.totalAmount,
+      0
+    )
+    const totalFee = totalCollected * 0.05
+    const netRevenue = totalCollected - totalFee
+
+    // Add calculations to each item
+    const itemsWithCalculations = purchases.map((purchase) => {
+      const itemTotalFee = purchase.totalAmount * 0.05
+      const itemNetRevenue = purchase.totalAmount - itemTotalFee
+
+      return {
+        ...purchase.toObject(),
+        fee: itemTotalFee,
+        netRevenue: itemNetRevenue,
+      }
+    })
+
     return res.status(200).json({
       success: true,
       message: 'Purchases fetched successfully',
       data: {
-        items: purchases,
+        items: itemsWithCalculations,
+        totals: {
+          totalCollected,
+          totalFee,
+          netRevenue,
+        },
         pagination: {
           totalItems: total,
           currentPage: parsedPage,

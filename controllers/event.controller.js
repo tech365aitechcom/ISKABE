@@ -1,4 +1,5 @@
 const { roles } = require('../constant')
+const mongoose = require('mongoose')
 const Event = require('../models/event.model')
 const Venue = require('../models/venue.model')
 const Registration = require('../models/registration.model')
@@ -6,6 +7,7 @@ const Bracket = require('../models/bracket.model')
 const Bout = require('../models/bout.model')
 const Fight = require('../models/fight.model')
 const TournamentSettings = require('../models/tournamentSettings.model')
+const SpectatorTicketPurchase = require('../models/spectatorTicketPurchase.model')
 
 exports.createEvent = async (req, res) => {
   try {
@@ -56,8 +58,9 @@ exports.createEvent = async (req, res) => {
     // Duplicate key error
     if (error.code === 11000) {
       const duplicatedField = Object.keys(error.keyPattern || {})[0]
-      const message = `${duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
-        } already exists. Please choose another.`
+      const message = `${
+        duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
+      } already exists. Please choose another.`
       return res.status(400).json({ error: message })
     }
 
@@ -255,6 +258,21 @@ exports.getEventById = async (req, res) => {
     const boutCount = await Bout.countDocuments({
       bracket: { $in: bracketIds },
     })
+
+    const totalRegistrationFees = await Registration.aggregate([
+      { $match: { event: new mongoose.Types.ObjectId(id) } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ])
+
+    const totalSpectatorTicketAmount = await SpectatorTicketPurchase.aggregate([
+      { $match: { event: new mongoose.Types.ObjectId(id) } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+    ])
+
+    const spectatorTicketTotal = totalSpectatorTicketAmount[0]?.total || 0
+    const totalFee = spectatorTicketTotal * 0.05
+    const totalNetRevenue = spectatorTicketTotal - totalFee
+
     res.json({
       success: true,
       data: {
@@ -262,6 +280,10 @@ exports.getEventById = async (req, res) => {
         registeredFighters,
         bracketCount,
         boutCount,
+        totalRegistrationFees: totalRegistrationFees[0]?.total || 0,
+        totalSpectatorTicketAmount: spectatorTicketTotal,
+        totalFee,
+        totalNetRevenue,
       },
     })
   } catch (error) {
@@ -269,7 +291,6 @@ exports.getEventById = async (req, res) => {
     res.status(500).json({ error: 'Error fetching event details' })
   }
 }
-
 
 exports.updateEvent = async (req, res) => {
   try {
@@ -284,18 +305,17 @@ exports.updateEvent = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
-      // Allow superAdmin to edit any event, or creator to edit
- 
-    if (role !== roles.superAdmin && event.createdBy.toString()
-      !== userId) {
+    // Allow superAdmin to edit any event, or creator to edit
+
+    if (role !== roles.superAdmin && event.createdBy.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to update this event',
       })
     }
 
-      // Update the event fields and save (this preserves validation     
-  
+    // Update the event fields and save (this preserves validation
+
     Object.assign(event, req.body)
     const updatedEvent = await event.save()
 
@@ -309,24 +329,23 @@ exports.updateEvent = async (req, res) => {
 
     // Handle Mongoose validation errors
     if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err =>
-        err.message)
+      const messages = Object.values(error.errors).map((err) => err.message)
       return res.status(400).json({
         success: false,
         error: messages.join(', '),
-        details: error.errors
+        details: error.errors,
       })
     }
 
     // Handle duplicate key errors
     if (error.code === 11000) {
-      const duplicatedField = Object.keys(error.keyPattern ||
-        {})[0]
-      const message = `${duplicatedField.charAt(0).toUpperCase() +
-        duplicatedField.slice(1)} already exists`
+      const duplicatedField = Object.keys(error.keyPattern || {})[0]
+      const message = `${
+        duplicatedField.charAt(0).toUpperCase() + duplicatedField.slice(1)
+      } already exists`
       return res.status(400).json({
         success: false,
-        error: message
+        error: message,
       })
     }
 
@@ -334,7 +353,7 @@ exports.updateEvent = async (req, res) => {
     if (error.name === 'CastError') {
       return res.status(400).json({
         success: false,
-        error: `Invalid ${error.path}: ${error.value}`
+        error: `Invalid ${error.path}: ${error.value}`,
       })
     }
 
@@ -342,7 +361,7 @@ exports.updateEvent = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error updating event',
-      message: error.message
+      message: error.message,
     })
   }
 }
@@ -379,8 +398,6 @@ exports.toggleEventStatus = async (req, res) => {
     res.status(500).json({ error: 'Error toggling event status' })
   }
 }
-
-
 
 exports.deleteEvent = async (req, res) => {
   try {
@@ -434,14 +451,3 @@ exports.deleteEvent = async (req, res) => {
     res.status(500).json({ error: 'Error deleting event' })
   }
 }
-
-
-
-
-
-
-
-
-
-
-
