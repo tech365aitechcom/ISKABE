@@ -251,12 +251,18 @@ exports.getEventById = async (req, res) => {
         fighterProfileId: fighter.createdBy?.fighterProfile?._id || null,
       }))
     }
-
+    const bracketCount = await Bracket.countDocuments({ event: id })
+    const bracketIds = await Bracket.find({ event: id }).distinct('_id')
+    const boutCount = await Bout.countDocuments({
+      bracket: { $in: bracketIds },
+    })
     res.json({
       success: true,
       data: {
         ...event.toObject(),
         registeredFighters,
+        bracketCount,
+        boutCount,
       },
     })
   } catch (error) {

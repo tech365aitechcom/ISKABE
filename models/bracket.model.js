@@ -15,6 +15,15 @@ const bracketSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    startDayNumber: {
+      type: Number,
+    },
+    boutRound: {
+      type: Number,
+    },
+    maxCompetitors: {
+      type: Number,
+    },
     group: String, // Optional: "Group A", "Group B"
     proClass: {
       type: String,
@@ -46,7 +55,7 @@ const bracketSchema = new mongoose.Schema(
     fighters: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'FighterProfile',
+        ref: 'Registration',
       },
     ],
     bouts: [

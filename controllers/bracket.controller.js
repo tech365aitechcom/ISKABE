@@ -22,6 +22,7 @@ exports.createBracket = async (req, res) => {
       data: bracket,
     })
   } catch (error) {
+    console.log(error)
     res.status(400).json({
       success: false,
       message: 'Failed to create bracket',
@@ -39,14 +40,7 @@ exports.getAllBrackets = async (req, res) => {
 
     const brackets = await Bracket.find(filter)
       .populate('event')
-      .populate({
-        path: 'fighters',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('fighters')
       .lean() // Get plain JS objects for post-processing
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
@@ -113,14 +107,7 @@ exports.getBracketById = async (req, res) => {
   try {
     const bracket = await Bracket.findById(req.params.id)
       .populate('event')
-      .populate({
-        path: 'fighters',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName email profilePhoto',
-        },
-      })
+      .populate('fighters')
       .lean()
 
     if (!bracket) {
