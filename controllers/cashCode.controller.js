@@ -39,6 +39,13 @@ exports.requestCashCode = async (req, res) => {
       paymentNotes,
     } = req.body
 
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required for cash code creation.',
+      })
+    }
+
     // Basic validation
     if (
       !role ||

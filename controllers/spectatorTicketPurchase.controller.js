@@ -70,17 +70,15 @@ exports.buySpectatorTicket = async (req, res) => {
 
     if (quantity > tier.limitPerUser) {
       return res.status(400).json({
-        message:
-          'You can only buy a maximum of ' +
-          tier.limitPerUser +
-          ' tickets per user',
+        message: `You can only buy a maximum of ${tier.limitPerUser} tickets per user`,
       })
     }
 
     let cashCodeDoc = null
     let cashCodeUser = null
 
-    if (paymentMethod === 'cash') {
+    // 🟡 CASH CODE logic only applies when there's NO transactionId
+    if (paymentMethod === 'cash' && !transactionId) {
       if (!cashCodeText) {
         return res
           .status(400)
@@ -112,25 +110,26 @@ exports.buySpectatorTicket = async (req, res) => {
           const fighter = await FighterProfile.findOne({
             userId: new mongoose.Types.ObjectId(user),
           })
-          cashCodeUser = fighter._id
+          cashCodeUser = fighter?._id
         } else if (cashCodeDoc.role === roles.trainer) {
           const trainer = await TrainerProfile.findOne({
             userId: new mongoose.Types.ObjectId(user),
           })
-          cashCodeUser = trainer._id
+          cashCodeUser = trainer?._id
         } else {
           cashCodeUser = cashCodeDoc.user
         }
+
         if (!cashCodeDoc.user.equals(cashCodeUser)) {
-          return res.status(400).json({
-            message: 'Cash code is not assigned to this user',
-          })
+          return res
+            .status(400)
+            .json({ message: 'Cash code is not assigned to this user' })
         }
       } else {
         if (guestDetails.email !== cashCodeDoc.email) {
-          return res.status(400).json({
-            message: 'Cash code is not assigned to this guest',
-          })
+          return res
+            .status(400)
+            .json({ message: 'Cash code is not assigned to this guest' })
         }
       }
     }
@@ -157,25 +156,36 @@ exports.buySpectatorTicket = async (req, res) => {
     })
 
     await purchase.save()
+
     // Decrement remaining count
     tier.remaining -= quantity
     ticketConfig.markModified('tiers')
     await ticketConfig.save()
 
-    if (cashCodeText) {
-      // Mark the cash code as redeemed
+    // ✅ Redeem the cash code only if it was used (cash & no transaction)
+    if (paymentMethod === 'cash' && !transactionId && cashCodeDoc) {
       cashCodeDoc.redemptionStatus = 'Checked-In'
       cashCodeDoc.redeemedAt = Date.now()
       await cashCodeDoc.save()
     }
 
-    const userDoc = await User.findById(cashCodeUser)
-    const recipientEmail =
-      buyerType === 'user' ? userDoc.email : guestDetails.email
+    // Determine email recipient
+    let recipientEmail = null
+    let name = 'Spectator'
 
+    if (buyerType === 'user') {
+      const userDoc = await User.findById(user)
+      recipientEmail = userDoc?.email
+      name = userDoc?.firstName || name
+    } else {
+      recipientEmail = guestDetails.email
+      name = guestDetails.firstName || name
+    }
+
+    // Send confirmation email
     await sendTicketConfirmationEmail({
       to: recipientEmail,
-      name: guestDetails?.firstName || userDoc?.firstName || 'Spectator',
+      name,
       eventTitle: event.name,
       eventLink: `https://ikffe.vercel.app/events/${eventId}`,
       purchaseDate: new Date().toISOString(),
@@ -189,7 +199,7 @@ exports.buySpectatorTicket = async (req, res) => {
     return res.status(201).json({
       success: true,
       message:
-        'Ticket purchased successfully,Please check your email for details',
+        'Ticket purchased successfully. Please check your email for details.',
       data: purchase,
     })
   } catch (error) {
