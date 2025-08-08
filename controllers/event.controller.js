@@ -343,7 +343,7 @@ exports.updateEvent = async (req, res) => {
 
 exports.toggleEventStatus = async (req, res) => {
   try {
-    const { id: userId } = req.user
+    const { id: userId, role } = req.user
     const { id } = req.params
     const { isDraft } = req.body
 
@@ -355,8 +355,8 @@ exports.toggleEventStatus = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
-    // Check if the logged-in user is the creator of the event
-    if (event.createdBy.toString() !== userId) {
+    // Check if the logged-in user is the creator of the event or has admin privileges
+    if (event.createdBy.toString() !== userId && role !== roles.superAdmin) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to update this event status',
