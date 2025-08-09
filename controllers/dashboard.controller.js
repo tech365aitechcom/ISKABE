@@ -324,22 +324,8 @@ exports.getDashboardData = async (req, res) => {
       .sort({ startDate: -1 })
       .limit(10)
       .select('startDate redCorner blueCorner event')
-      .populate({
-        path: 'redCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName',
-        },
-      })
-      .populate({
-        path: 'blueCorner',
-        populate: {
-          path: 'userId',
-          model: 'User',
-          select: 'firstName lastName',
-        },
-      })
+      .populate('redCorner')
+      .populate('blueCorner')
 
     // 16. Fighters with Alerts
     const rawAlerts = await Registration.find({
