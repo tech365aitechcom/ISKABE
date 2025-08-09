@@ -31,5 +31,9 @@ router.get(
   '/purchase/event/:eventId',
   spectatorTicketPurchaseController.getEventPurchases
 )
+router.get(
+  '/purchase/event/:eventId/redemption-logs',
+  spectatorTicketPurchaseController.getEventRedemptionLogs
+)
 
 module.exports = router

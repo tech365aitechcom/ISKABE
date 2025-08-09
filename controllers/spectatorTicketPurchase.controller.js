@@ -213,7 +213,13 @@ exports.buySpectatorTicket = async (req, res) => {
 exports.redeemSpectatorTicket = async (req, res) => {
   try {
     const { ticketCode, quantityToRedeem, entryMode = 'Manual' } = req.body
-    const { id: userId } = req.user
+    const { id: userId, role } = req.user
+
+    if (role !== roles.superAdmin || role !== roles.promoter) {
+      return res.status(403).json({
+        message: 'Access denied,You are not authorized to redeem tickets',
+      })
+    }
 
     if (!ticketCode || !quantityToRedeem) {
       return res
@@ -397,5 +403,85 @@ exports.getEventPurchases = async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'Internal server error' })
+  }
+}
+
+exports.getEventRedemptionLogs = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { page = 1, limit = 10 } = req.query
+
+    const parsedPage = parseInt(page)
+    const parsedLimit = parseInt(limit)
+    const skip = (parsedPage - 1) * parsedLimit
+
+    if (!eventId) {
+      return res.status(400).json({ message: 'Event ID is required' })
+    }
+
+    // Find purchases for the event that have redemption logs
+    const purchases = await SpectatorTicketPurchase.find({
+      event: eventId,
+      'redemptionLogs.0': { $exists: true }, // ensures at least 1 log
+    })
+      .populate('event', 'name')
+      .populate('user', 'firstName lastName email')
+      .populate('redemptionLogs.redeemedBy', 'firstName lastName email')
+      .sort({ 'redemptionLogs.redeemedAt': -1 })
+      .skip(skip)
+      .limit(parsedLimit)
+      .lean()
+
+    // Flatten logs so each redemption is its own row
+    const flattenedLogs = purchases.flatMap((purchase) =>
+      purchase.redemptionLogs.map((log) => ({
+        ticketCode: purchase.ticketCode,
+        tier: purchase.tier,
+        buyerName:
+          purchase.buyerType === 'user'
+            ? `${purchase.user?.firstName || ''} ${
+                purchase.user?.lastName || ''
+              }`.trim()
+            : `${purchase.guestDetails?.firstName || ''} ${
+                purchase.guestDetails?.lastName || ''
+              }`.trim(),
+        buyerEmail:
+          purchase.buyerType === 'user'
+            ? purchase.user?.email
+            : purchase.guestDetails?.email,
+        eventName: purchase.event?.name,
+        amountPaid: purchase.totalAmount,
+        redeemedAt: log.redeemedAt,
+        redeemedBy: `${log.redeemedBy?.firstName || ''} ${
+          log.redeemedBy?.lastName || ''
+        }`.trim(),
+        redeemedByEmail: log.redeemedBy?.email,
+        quantity: log.quantity,
+        entryMode: log.method,
+      }))
+    )
+
+    // Pagination info
+    const totalLogs = flattenedLogs.length
+    const paginatedLogs = flattenedLogs.slice(0, parsedLimit) // since skip already applied on purchases
+
+    return res.status(200).json({
+      success: true,
+      message: 'Redemption logs fetched successfully',
+      data: {
+        items: paginatedLogs,
+        pagination: {
+          totalItems: totalLogs,
+          currentPage: parsedPage,
+          totalPages: Math.ceil(totalLogs / parsedLimit),
+          pageSize: parsedLimit,
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching redemption logs:', error)
+    return res
+      .status(500)
+      .json({ message: 'Internal server error', error: error.message })
   }
 }
