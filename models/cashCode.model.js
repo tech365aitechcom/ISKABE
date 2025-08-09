@@ -66,8 +66,8 @@ const cashCodeSchema = new mongoose.Schema(
 
     redemptionStatus: {
       type: String,
-      enum: ['Not Yet', 'Checked-In'],
-      default: 'Not Yet',
+      enum: ['Not Redeemed', 'Checked-In'],
+      default: 'Not Redeemed',
     },
 
     redeemedAt: {

@@ -39,10 +39,10 @@ exports.requestCashCode = async (req, res) => {
       paymentNotes,
     } = req.body
 
-    if (!userId) {
+    if (!userId && role !== roles.spectator) {
       return res.status(400).json({
         success: false,
-        message: 'User ID is required for cash code creation.',
+        message: `Select ${role} from dropdown for cash code generation.`,
       })
     }
 
@@ -208,6 +208,7 @@ exports.getAllCashCodes = async (req, res) => {
     // Populate basic user info
     const codes = await CashCode.find(filter)
       .populate('event')
+      .populate('createdBy', 'firstName lastName')
       .lean()
       .skip(skip)
       .limit(parseInt(limit))

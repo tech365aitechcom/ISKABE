@@ -5,6 +5,7 @@ const roles = {
   trainer: 'trainer',
   parent: 'parent',
   promoter: 'promoter',
+  spectator: 'spectator',
 }
 
 module.exports = {
