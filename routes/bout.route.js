@@ -5,6 +5,7 @@ const { protect } = require('../middlewares/auth.middleware')
 
 router.post('/', protect, boutController.createBout)
 router.get('/', boutController.getAllBouts)
+router.get('/event/:eventId', boutController.getBoutsByEventId)
 router.get('/:id', boutController.getBoutById)
 router.put('/:id', boutController.updateBout)
 router.delete('/:id', boutController.deleteBout)

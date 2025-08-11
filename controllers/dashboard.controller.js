@@ -316,16 +316,21 @@ exports.getDashboardData = async (req, res) => {
       status: 'Verified',
     })
       .sort({ createdAt: -1 })
-      .limit(10)
       .populate('event')
+      .populate('createdBy')
 
     // 15. Bouts Missing Results
     const boutsMissingResults = await Bout.find({ fight: null })
       .sort({ startDate: -1 })
-      .limit(10)
-      .select('startDate redCorner blueCorner event')
+      .select('startDate boutNumber redCorner blueCorner bracket')
       .populate('redCorner')
       .populate('blueCorner')
+      .populate({
+        path: 'bracket',
+        populate: {
+          path: 'event',
+        },
+      })
 
     // 16. Fighters with Alerts
     const rawAlerts = await Registration.find({

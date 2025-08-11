@@ -1,10 +1,35 @@
 const mongoose = require('mongoose')
 
+const squareSchema = new mongoose.Schema(
+  {
+    transactionId: {
+      type: String,
+      required: true,
+    },
+    receiptNumber: {
+      type: String,
+      required: true,
+    },
+    orderId: {
+      type: String,
+      required: true,
+    },
+    last4: {
+      type: String,
+      required: true,
+    },
+    receiptUrl: {
+      type: String,
+    },
+  },
+  { _id: false }
+)
+
 const registrationSchema = new mongoose.Schema(
   {
     registrationType: {
       type: String,
-      enum: ['trainer', 'fighter'],
+      enum: ['trainer', 'fighter', 'official'],
       required: true,
     },
 
@@ -74,9 +99,7 @@ const registrationSchema = new mongoose.Schema(
       type: String,
       enum: ['cash', 'card'],
     },
-    transactionId: {
-      type: String,
-    },
+    squareDetails: squareSchema,
     paymentNotes: {
       type: String,
     },

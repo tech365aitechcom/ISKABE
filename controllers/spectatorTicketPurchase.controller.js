@@ -367,12 +367,13 @@ exports.getEventPurchases = async (req, res) => {
       (sum, purchase) => sum + purchase.totalAmount,
       0
     )
-    const totalFee = totalCollected * 0.05
+    const totalFee = totalCollected * process.env.TICKET_FEE_PERCENTAGE
     const netRevenue = totalCollected - totalFee
 
     // Add calculations to each item
     const itemsWithCalculations = purchases.map((purchase) => {
-      const itemTotalFee = purchase.totalAmount * 0.05
+      const itemTotalFee =
+        purchase.totalAmount * process.env.TICKET_FEE_PERCENTAGE
       const itemNetRevenue = purchase.totalAmount - itemTotalFee
 
       return {

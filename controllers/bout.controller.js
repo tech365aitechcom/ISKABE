@@ -138,3 +138,46 @@ exports.deleteBout = async (req, res) => {
     res.status(500).json({ success: false, message: error.message })
   }
 }
+
+exports.getBoutsByEventId = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { page = 1, limit = 10 } = req.query
+
+    const brackets = await Bracket.find({ event: eventId }).select('_id')
+    const bracketIds = brackets.map((bracket) => bracket._id)
+
+    const bouts = await Bout.find({ bracket: { $in: bracketIds } })
+      .populate({
+        path: 'bracket',
+        populate: {
+          path: 'event',
+          select: 'name startDate endDate',
+        },
+      })
+      .populate('redCorner')
+      .populate('blueCorner')
+      .populate('fight')
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .sort({ 'bracket.bracketNumber': 1, boutNumber: 1 })
+
+    const total = await Bout.countDocuments({ bracket: { $in: bracketIds } })
+
+    res.json({
+      success: true,
+      message: 'Bout list fetched',
+      data: {
+        items: bouts,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+}

@@ -23,6 +23,31 @@ const redemptionLogSchema = new mongoose.Schema(
   { _id: false }
 )
 
+const squareSchema = new mongoose.Schema(
+  {
+    transactionId: {
+      type: String,
+      required: true,
+    },
+    receiptNumber: {
+      type: String,
+      required: true,
+    },
+    orderId: {
+      type: String,
+      required: true,
+    },
+    last4: {
+      type: String,
+      required: true,
+    },
+    receiptUrl: {
+      type: String,
+    },
+  },
+  { _id: false }
+)
+
 const spectatorTicketPurchaseSchema = new mongoose.Schema(
   {
     event: {
@@ -78,10 +103,7 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
       ref: 'CashCode',
       default: null,
     },
-    transactionId: {
-      type: String,
-      default: null,
-    },
+    squareDetails: squareSchema,
     qrCode: {
       type: String,
     },

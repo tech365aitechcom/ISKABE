@@ -270,7 +270,7 @@ exports.getEventById = async (req, res) => {
     ])
 
     const spectatorTicketTotal = totalSpectatorTicketAmount[0]?.total || 0
-    const totalFee = spectatorTicketTotal * 0.05
+    const totalFee = spectatorTicketTotal * process.env.TICKET_FEE_PERCENTAGE
     const totalNetRevenue = spectatorTicketTotal - totalFee
 
     res.json({

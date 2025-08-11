@@ -189,6 +189,18 @@ exports.getRegistrationsByEventId = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
+    // Total amount collected for this event (only Paid registrations)
+    const totalCollectionAgg = await Registration.aggregate([
+      {
+        $match: {
+          event: new mongoose.Types.ObjectId(eventId),
+          paymentStatus: 'Paid',
+        },
+      },
+      { $group: { _id: null, totalAmount: { $sum: '$amount' } } },
+    ])
+    const totalCollection = totalCollectionAgg[0]?.totalAmount || 0
+
     const total = await Registration.countDocuments(filter)
 
     const registrations = await Registration.find(filter)
@@ -204,6 +216,7 @@ exports.getRegistrationsByEventId = async (req, res) => {
       message: 'Registrations list fetched',
       data: {
         items: registrations,
+        totalCollection,
         pagination: {
           totalItems: total,
           currentPage: parseInt(page),
