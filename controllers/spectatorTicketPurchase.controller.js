@@ -215,11 +215,11 @@ exports.redeemSpectatorTicket = async (req, res) => {
     const { ticketCode, quantityToRedeem, entryMode = 'Manual' } = req.body
     const { id: userId, role } = req.user
 
-    if (role !== roles.superAdmin || role !== roles.promoter) {
-      return res.status(403).json({
-        message: 'Access denied,You are not authorized to redeem tickets',
-      })
-    }
+    // if (role !== roles.superAdmin || role !== roles.promoter) {
+    //   return res.status(403).json({
+    //     message: 'Access denied,You are not authorized to redeem tickets',
+    //   })
+    // }
 
     if (!ticketCode || !quantityToRedeem) {
       return res
