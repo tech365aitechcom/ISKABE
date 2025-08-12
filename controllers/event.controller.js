@@ -226,6 +226,60 @@ exports.getEventById = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
+    // Get brackets related to this event
+    const brackets = await Bracket.find({ event: id })
+      .populate({
+        path: 'fighters',
+        select: 'firstName lastName weightClass country createdBy',
+        populate: {
+          path: 'createdBy',
+          select: 'fighterProfile',
+          populate: {
+            path: 'fighterProfile',
+            select: '_id',
+          },
+        },
+      })
+      .lean()
+
+    // Get all bracket IDs
+    const bracketIds = brackets.map((bracket) => bracket._id)
+
+    // Get bouts for all brackets
+    const bouts = await Bout.find({ bracket: { $in: bracketIds } })
+      .populate('redCorner')
+      .populate('blueCorner')
+      .lean()
+
+    // Get fights for all bouts
+    const boutIds = bouts.map((bout) => bout._id)
+    const fights = await Fight.find({ bout: { $in: boutIds } })
+      .populate('winner')
+      .lean()
+
+    // Organize data structure
+    const bracketsWithDetails = brackets.map((bracket) => {
+      const bracketBouts = bouts.filter(
+        (bout) => bout.bracket.toString() === bracket._id.toString()
+      )
+
+      const boutsWithFights = bracketBouts.map((bout) => {
+        const boutFights = fights.filter(
+          (fight) => fight.bout.toString() === bout._id.toString()
+        )
+
+        return {
+          ...bout,
+          fights: boutFights,
+        }
+      })
+
+      return {
+        ...bracket,
+        bouts: boutsWithFights,
+      }
+    })
+
     let registeredFighters = []
 
     if (event.registeredParticipants > 0) {
@@ -244,7 +298,6 @@ exports.getEventById = async (req, res) => {
         .select('firstName lastName weightClass country createdBy')
         .lean()
 
-      // Reshape data to only return required fields
       registeredFighters = fighters.map((fighter) => ({
         firstName: fighter.firstName,
         lastName: fighter.lastName,
@@ -253,11 +306,10 @@ exports.getEventById = async (req, res) => {
         fighterProfileId: fighter.createdBy?.fighterProfile?._id || null,
       }))
     }
-    const bracketCount = await Bracket.countDocuments({ event: id })
-    const bracketIds = await Bracket.find({ event: id }).distinct('_id')
-    const boutCount = await Bout.countDocuments({
-      bracket: { $in: bracketIds },
-    })
+
+    const bracketCount = brackets.length
+    const boutCount = bouts.length
+    const fightCount = fights.length
 
     const totalRegistrationFees = await Registration.aggregate([
       { $match: { event: new mongoose.Types.ObjectId(id) } },
@@ -278,8 +330,10 @@ exports.getEventById = async (req, res) => {
       data: {
         ...event.toObject(),
         registeredFighters,
+        brackets: bracketsWithDetails,
         bracketCount,
         boutCount,
+        fightCount,
         totalRegistrationFees: totalRegistrationFees[0]?.total || 0,
         totalSpectatorTicketAmount: spectatorTicketTotal,
         totalFee,
@@ -288,7 +342,9 @@ exports.getEventById = async (req, res) => {
     })
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'Error fetching event details' })
+    res.status(500).json({
+      error: 'Error fetching event details with brackets, bouts, and fights',
+    })
   }
 }
 
