@@ -15,7 +15,22 @@ exports.createBracket = async (req, res) => {
       })
     }
 
-    const { event, maxCompetitors } = req.body
+    const { event, bracketNumber, maxCompetitors } = req.body
+
+    // Check if bracket with same bracketNumber already exists for this event
+    if (bracketNumber) {
+      const existingBracket = await Bracket.findOne({
+        event,
+        bracketNumber
+      })
+
+      if (existingBracket) {
+        return res.status(409).json({
+          success: false,
+          message: `Bracket number ${bracketNumber} already exists for this event.`
+        })
+      }
+    }
 
     // Fetch Tournament Settings for the event
     const tournamentSettings = await TournamentSettings.findOne({
@@ -154,6 +169,22 @@ exports.updateBracket = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: 'Bracket not found' })
+    }
+
+    // Check if bracketNumber is being updated and if it would create a duplicate
+    if (updateData.bracketNumber && updateData.bracketNumber !== existingBracket.bracketNumber) {
+      const duplicateBracket = await Bracket.findOne({
+        event: existingBracket.event,
+        bracketNumber: updateData.bracketNumber,
+        _id: { $ne: bracketId } // Exclude current bracket from search
+      })
+
+      if (duplicateBracket) {
+        return res.status(409).json({
+          success: false,
+          message: `Bracket number ${updateData.bracketNumber} already exists for this event.`
+        })
+      }
     }
 
     // If fighters are being updated, validate against bracket.maxCompetitors
