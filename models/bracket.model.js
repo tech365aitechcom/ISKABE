@@ -73,8 +73,16 @@ const bracketSchema = new mongoose.Schema(
     },
     fighters: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Registration',
+        fighter: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Registration',
+          required: true,
+        },
+        seed: {
+          type: Number,
+          required: true,
+        },
+        _id: false,
       },
     ],
     bouts: [

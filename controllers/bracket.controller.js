@@ -80,7 +80,7 @@ exports.getAllBrackets = async (req, res) => {
 
     const brackets = await Bracket.find(filter)
       .populate('event')
-      .populate('fighters')
+      .populate('fighters.fighter')
       .lean() // Get plain JS objects for post-processing
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
@@ -133,7 +133,7 @@ exports.getBracketById = async (req, res) => {
   try {
     const bracket = await Bracket.findById(req.params.id)
       .populate('event')
-      .populate('fighters')
+      .populate('fighters.fighter')
       .lean()
 
     if (!bracket) {

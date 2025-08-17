@@ -20,7 +20,6 @@ const boutSchema = new mongoose.Schema(
     notes: String,
     startDate: {
       type: Date,
-      required: true,
     },
     redCorner: {
       type: mongoose.Schema.Types.ObjectId,
@@ -47,6 +46,10 @@ const boutSchema = new mongoose.Schema(
     fight: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Fight',
+    },
+    isStarted: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
