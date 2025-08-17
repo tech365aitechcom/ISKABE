@@ -116,4 +116,21 @@ router.get('/users/:id', protect, authController.getUserById)
 // Update user profile route
 router.put('/users/:id', protect, authController.updateUserById)
 
+// Check email route
+router.post(
+  '/check-email',
+  [
+    body('email')
+      .notEmpty()
+      .withMessage('Email is required')
+      .isEmail()
+      .withMessage('Invalid email format')
+      .normalizeEmail(),
+  ],
+  authController.checkEmail
+)
+
+// Get fighter system record by email
+router.get('/fighter/system-record/:email', authController.getFighterSystemRecord)
+
 module.exports = router

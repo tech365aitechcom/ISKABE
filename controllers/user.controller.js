@@ -1,4 +1,7 @@
 const User = require('../models/user.model')
+const Registration = require('../models/registration.model')
+const Fight = require('../models/fight.model')
+const Bout = require('../models/bout.model')
 const Suspension = require('../models/suspension.model')
 const jwt = require('jsonwebtoken')
 const { validationResult } = require('express-validator')
@@ -35,13 +38,18 @@ exports.signup = async (req, res) => {
 
   try {
     // Check if email already exists
-   const existingUser = await User.findOne({ email })
-if (existingUser) {
-  if (existingUser.isSuspended) {
-    return res.status(403).json({ message: 'This account has been suspended. You cannot register again with this email.' })
-  }
-  return res.status(409).json({ message: 'Email already exists' })
-}
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      if (existingUser.isSuspended) {
+        return res
+          .status(403)
+          .json({
+            message:
+              'This account has been suspended. You cannot register again with this email.',
+          })
+      }
+      return res.status(409).json({ message: 'Email already exists' })
+    }
 
     // Combine date of birth
     const dateOfBirth = new Date(`${dobYear}-${dobMonth}-${dobDay}`)
@@ -103,9 +111,10 @@ exports.login = async (req, res) => {
     }
 
     if (user.isSuspended) {
-  return res.status(403).json({ message: 'Your account has been suspended by the admin.' });
-}
-
+      return res
+        .status(403)
+        .json({ message: 'Your account has been suspended by the admin.' })
+    }
 
     const isPasswordValid = await user.comparePassword(password)
     if (!isPasswordValid) {
@@ -157,7 +166,10 @@ exports.forgotPassword = async (req, res) => {
     const now = Date.now()
     const recentRequestGap = 15 * 60 * 1000 // 15 minutes
 
-    if (user.resetPasswordExpiry && user.resetPasswordExpiry - now > recentRequestGap) {
+    if (
+      user.resetPasswordExpiry &&
+      user.resetPasswordExpiry - now > recentRequestGap
+    ) {
       const waitMinutes = Math.ceil((user.resetPasswordExpiry - now) / 60000)
       return res.status(429).json({
         message: `Too many reset requests. Please wait ${waitMinutes} minutes before trying again.`,
@@ -183,7 +195,6 @@ exports.forgotPassword = async (req, res) => {
       .json({ message: 'Something went wrong while processing your request' })
   }
 }
-
 
 exports.resetPassword = async (req, res) => {
   const errors = validationResult(req)
@@ -399,6 +410,136 @@ exports.updateUserById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error while updating user',
+    })
+  }
+}
+
+exports.checkEmail = async (req, res) => {
+  const { email } = req.body
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email is required',
+    })
+  }
+
+  try {
+    const user = await User.findOne({ email })
+
+    return res.status(200).json({
+      success: true,
+      exists: !!user,
+    })
+  } catch (error) {
+    console.error('Check email error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while checking email',
+    })
+  }
+}
+
+exports.getFighterSystemRecord = async (req, res) => {
+  const { email } = req.params
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email is required',
+    })
+  }
+
+  try {
+    // Find all registrations for this fighter (regardless of User schema presence)
+    const registrations = await Registration.find({
+      email: email,
+      registrationType: 'fighter',
+    })
+
+    if (!registrations.length) {
+      return res.status(200).json({
+        success: true,
+        message: 'Fighter system record fetched successfully',
+        data: {
+          email: email,
+          systemRecord: '0-0-0',
+          breakdown: {
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            totalFights: 0,
+          },
+          registrationsCount: 0,
+        },
+      })
+    }
+
+    // Get fighter name from the most recent registration
+    const latestRegistration = registrations.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    )[0]
+    const fighterName = `${latestRegistration.firstName} ${latestRegistration.lastName}`
+
+    const registrationIds = registrations.map((reg) => reg._id)
+
+    // Find all bouts where this fighter participated
+    const bouts = await Bout.find({
+      $or: [
+        { redCorner: { $in: registrationIds } },
+        { blueCorner: { $in: registrationIds } },
+      ],
+    }).populate('fight')
+
+    let wins = 0
+    let losses = 0
+    let draws = 0
+
+    // Calculate W-L-D from completed fights
+    for (const bout of bouts) {
+      if (bout.fight && bout.fight.status === 'Completed') {
+        const fight = bout.fight
+
+        if (
+          fight.resultMethod === 'Draw' ||
+          fight.resultMethod === 'No Contest'
+        ) {
+          draws++
+        } else if (fight.winner) {
+          const fighterWon = registrationIds.some(
+            (id) => id.toString() === fight.winner.toString()
+          )
+          if (fighterWon) {
+            wins++
+          } else {
+            losses++
+          }
+        }
+      }
+    }
+
+    const systemRecord = `${wins}-${losses}-${draws}`
+
+    return res.status(200).json({
+      success: true,
+      message: 'Fighter system record fetched successfully',
+      data: {
+        email: email,
+        systemRecord: systemRecord,
+        breakdown: {
+          wins,
+          losses,
+          draws,
+          totalFights: wins + losses + draws,
+        },
+        registrationsCount: registrations.length,
+      },
+    })
+  } catch (error) {
+    console.error('Get fighter system record error:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while fetching fighter system record',
     })
   }
 }

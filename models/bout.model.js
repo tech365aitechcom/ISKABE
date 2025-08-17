@@ -30,6 +30,20 @@ const boutSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Registration',
     },
+    redCornerDetails: {
+      weight: Number,
+      height: {
+        feet: Number,
+        inches: Number,
+      },
+    },
+    blueCornerDetails: {
+      weight: Number,
+      height: {
+        feet: Number,
+        inches: Number,
+      },
+    },
     fight: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Fight',

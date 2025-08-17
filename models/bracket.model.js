@@ -11,6 +11,9 @@ const bracketSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    sequenceNumber: {
+      type: Number,
+    },
     divisionTitle: {
       type: String,
       required: true,
@@ -24,7 +27,7 @@ const bracketSchema = new mongoose.Schema(
     maxCompetitors: {
       type: Number,
     },
-    group: String, // Optional: "Group A", "Group B"
+    group: Number,
     bracketCriteria: String,
     proClass: {
       type: String,
@@ -63,16 +66,10 @@ const bracketSchema = new mongoose.Schema(
     ageClass: String,
     sport: String,
     ruleStyle: String, // e.g., "Muay Thai", "Point Sparring"
-    ring: String,
+    ring: Number,
     weightClass: {
       min: Number,
       max: Number,
-    },
-    fightStartTime: {
-      type: Date,
-    },
-    weighInTime: {
-      type: Date,
     },
     fighters: [
       {
