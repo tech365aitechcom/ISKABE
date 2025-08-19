@@ -243,6 +243,62 @@ exports.getRegistrationsByEventId = async (req, res) => {
   }
 }
 
+exports.getPaidRegistrationsByEventId = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { registrationType, page = 1, limit = 10 } = req.query
+    const filter = {}
+    filter.event = eventId
+    filter.paymentStatus = 'Paid'
+
+    if (registrationType) {
+      filter.registrationType = registrationType
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit)
+
+    const total = await Registration.countDocuments(filter)
+
+    const registrations = await Registration.find(filter)
+      .populate(
+        'createdBy',
+        '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
+      )
+      .skip(skip)
+      .limit(parseInt(limit))
+
+    // Calculate total amount for paid registrations
+    const totalCollectionAgg = await Registration.aggregate([
+      {
+        $match: {
+          event: new mongoose.Types.ObjectId(eventId),
+          paymentStatus: 'Paid',
+        },
+      },
+      { $group: { _id: null, totalAmount: { $sum: '$amount' } } },
+    ])
+    const totalCollection = totalCollectionAgg[0]?.totalAmount || 0
+
+    res.json({
+      success: true,
+      message: 'Paid registrations list fetched',
+      data: {
+        items: registrations,
+        totalCollection,
+        pagination: {
+          totalItems: total,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          pageSize: parseInt(limit),
+        },
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Error fetching paid registrations' })
+  }
+}
+
 exports.getRegistrationById = async (req, res) => {
   try {
     const registration = await Registration.findById(req.params.id).populate(

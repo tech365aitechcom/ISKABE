@@ -187,6 +187,29 @@ exports.updateBracket = async (req, res) => {
       }
     }
 
+    // Validate maxCompetitors against tournament settings
+    if (updateData.maxCompetitors !== undefined) {
+      const tournamentSettings = await TournamentSettings.findOne({
+        eventId: existingBracket.event,
+      })
+
+      if (!tournamentSettings) {
+        return res.status(404).json({
+          success: false,
+          message: 'Tournament settings not found for the specified event.',
+        })
+      }
+
+      const maxAllowed = tournamentSettings.bracketSettings.maxFightersPerBracket
+
+      if (updateData.maxCompetitors > maxAllowed) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum competitors per bracket cannot exceed ${maxAllowed} as per tournament settings.`,
+        })
+      }
+    }
+
     // If fighters are being updated, validate against bracket.maxCompetitors
     if (updateData.fighters && Array.isArray(updateData.fighters)) {
       const maxAllowed = existingBracket.maxCompetitors

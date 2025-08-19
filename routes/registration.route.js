@@ -7,6 +7,7 @@ router.post('/', protect, registrationController.createRegistration)
 router.get('/', registrationController.getRegistrations)
 router.get('/:id', registrationController.getRegistrationById)
 router.get('/event/:eventId', registrationController.getRegistrationsByEventId)
+router.get('/event/:eventId/paid', registrationController.getPaidRegistrationsByEventId)
 router.put('/:id', registrationController.updateRegistration)
 router.delete('/:id', registrationController.deleteRegistration)
 
