@@ -52,8 +52,7 @@ exports.requestCashCode = async (req, res) => {
       !eventId ||
       !eventDate ||
       amountPaid === undefined ||
-      !paymentType ||
-      !paymentNotes
+      !paymentType
     ) {
       return res.status(400).json({ message: 'Missing required fields.' })
     }

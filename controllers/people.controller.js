@@ -178,9 +178,6 @@ exports.getAllPeople = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
-    // Debug log
-    console.log('Final Filter:', JSON.stringify(filter, null, 2))
-
     const users = await User.find(filter)
       .select(
         '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
