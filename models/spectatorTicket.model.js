@@ -41,7 +41,7 @@ const ticketTierSchema = new mongoose.Schema(
     },
     availabilityMode: {
       type: String,
-      enum: ['Online', 'On-Site', 'Both'],
+      enum: ['Online', 'OnSite', 'Both'],
       required: true,
     },
     salesStartDate: {

@@ -63,6 +63,18 @@ exports.createRegistration = async (req, res) => {
       resolvedCashCode = cashCodeDoc._id
     }
 
+    // Check if the same email is already registered for this event
+    const existingRegistration = await Registration.findOne({
+      email: req.body.email,
+      event: eventId,
+    })
+
+    if (existingRegistration) {
+      return res.status(400).json({
+        message: 'This user is already registered for this event',
+      })
+    }
+
     const registration = new Registration({
       ...req.body,
       cashCode: resolvedCashCode || null,
