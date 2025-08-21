@@ -4,7 +4,14 @@ const suspensionSchema = new mongoose.Schema(
   {
     person: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      required: true,
+      refPath: 'personType',
+    },
+
+    personType: {
+      type: String,
+      enum: ['User', 'Registration'],
+      default: 'User',
       required: true,
     },
 

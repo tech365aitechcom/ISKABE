@@ -381,8 +381,7 @@ exports.getDashboardData = async (req, res) => {
     const spectatorTicketLogs = await SpectatorTicketPurchase.find()
       .sort({ createdAt: -1 })
       .limit(4)
-      .select('tier quantity totalAmount event')
-      .populate('event', 'name startDate')
+      .populate('event')
 
     res.status(200).json({
       success: true,

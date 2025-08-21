@@ -3,6 +3,7 @@ const Bracket = require('../models/bracket.model')
 const Bout = require('../models/bout.model')
 const Fight = require('../models/fight.model')
 const TournamentSettings = require('../models/tournamentSettings.model')
+const Suspension = require('../models/suspension.model')
 
 exports.createBracket = async (req, res) => {
   try {
@@ -96,9 +97,54 @@ exports.getAllBrackets = async (req, res) => {
       .populate('fight')
       .lean()
 
+    // Collect all unique fighter IDs from bouts for suspension checking
+    const fighterIds = new Set()
+    allBouts.forEach((bout) => {
+      if (bout.redCorner?._id) fighterIds.add(bout.redCorner._id.toString())
+      if (bout.blueCorner?._id) fighterIds.add(bout.blueCorner._id.toString())
+    })
+
+    // Fetch active suspensions for all fighters
+    const activeSuspensions = await Suspension.find({
+      person: { $in: Array.from(fighterIds) },
+      personType: 'Registration',
+      status: 'Active'
+    }).lean()
+
+    // Create suspension lookup map by fighter ID
+    const suspensionMap = {}
+    activeSuspensions.forEach((suspension) => {
+      const fighterId = suspension.person.toString()
+      if (!suspensionMap[fighterId]) suspensionMap[fighterId] = []
+      suspensionMap[fighterId].push(suspension)
+    })
+
+    // Add suspension data to bouts
+    const boutsWithSuspensions = allBouts.map((bout) => {
+      const updatedBout = { ...bout }
+      
+      if (bout.redCorner?._id) {
+        const redCornerSuspensions = suspensionMap[bout.redCorner._id.toString()] || []
+        updatedBout.redCorner = {
+          ...bout.redCorner,
+          suspensions: redCornerSuspensions
+        }
+      }
+      
+      if (bout.blueCorner?._id) {
+        const blueCornerSuspensions = suspensionMap[bout.blueCorner._id.toString()] || []
+        updatedBout.blueCorner = {
+          ...bout.blueCorner,
+          suspensions: blueCornerSuspensions
+        }
+      }
+      
+      return updatedBout
+    })
+
     // Group bouts by bracket ID
     const boutsByBracket = {}
-    allBouts.forEach((b) => {
+    boutsWithSuspensions.forEach((b) => {
       const bid = b.bracket.toString()
       if (!boutsByBracket[bid]) boutsByBracket[bid] = []
       boutsByBracket[bid].push(b)

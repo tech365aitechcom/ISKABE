@@ -191,12 +191,16 @@ exports.getRegistrations = async (req, res) => {
 exports.getRegistrationsByEventId = async (req, res) => {
   try {
     const { eventId } = req.params
-    const { registrationType, page = 1, limit = 10 } = req.query
+    const { registrationType, email, page = 1, limit = 10 } = req.query
     const filter = {}
     filter.event = eventId
 
     if (registrationType) {
       filter.registrationType = registrationType
+    }
+
+    if (email) {
+      filter.email = email
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit)

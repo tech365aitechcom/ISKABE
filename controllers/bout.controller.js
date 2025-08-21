@@ -2,6 +2,7 @@ const { roles } = require('../constant')
 const Bout = require('../models/bout.model')
 const Bracket = require('../models/bracket.model')
 const Fight = require('../models/fight.model')
+const Suspension = require('../models/suspension.model')
 
 exports.createBout = async (req, res) => {
   try {
@@ -59,12 +60,58 @@ exports.getAllBouts = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort({ boutNumber: 1 })
+      .lean()
+
+    // Collect all unique fighter IDs from bouts for suspension checking
+    const fighterIds = new Set()
+    bouts.forEach((bout) => {
+      if (bout.redCorner?._id) fighterIds.add(bout.redCorner._id.toString())
+      if (bout.blueCorner?._id) fighterIds.add(bout.blueCorner._id.toString())
+    })
+
+    // Fetch active suspensions for all fighters
+    const activeSuspensions = await Suspension.find({
+      person: { $in: Array.from(fighterIds) },
+      personType: 'Registration',
+      status: 'Active'
+    }).lean()
+
+    // Create suspension lookup map by fighter ID
+    const suspensionMap = {}
+    activeSuspensions.forEach((suspension) => {
+      const fighterId = suspension.person.toString()
+      if (!suspensionMap[fighterId]) suspensionMap[fighterId] = []
+      suspensionMap[fighterId].push(suspension)
+    })
+
+    // Add suspension data to bouts
+    const boutsWithSuspensions = bouts.map((bout) => {
+      const updatedBout = { ...bout }
+      
+      if (bout.redCorner?._id) {
+        const redCornerSuspensions = suspensionMap[bout.redCorner._id.toString()] || []
+        updatedBout.redCorner = {
+          ...bout.redCorner,
+          suspensions: redCornerSuspensions
+        }
+      }
+      
+      if (bout.blueCorner?._id) {
+        const blueCornerSuspensions = suspensionMap[bout.blueCorner._id.toString()] || []
+        updatedBout.blueCorner = {
+          ...bout.blueCorner,
+          suspensions: blueCornerSuspensions
+        }
+      }
+      
+      return updatedBout
+    })
 
     const count = await Bout.countDocuments(filter)
 
     res.status(200).json({
       success: true,
-      data: bouts,
+      data: boutsWithSuspensions,
       pagination: {
         total: count,
         page: parseInt(page),

@@ -32,8 +32,6 @@ exports.createSuspension = async (req, res) => {
 
     await User.findByIdAndUpdate(person, { isSuspended: true })
 
-
-
     res.status(201).json({
       success: true,
       message: 'User suspended successfully.',
@@ -59,15 +57,41 @@ exports.getAllSuspensions = async (req, res) => {
       : null
 
     const pipeline = [
+      // Lookup from users (always try, since old data is all User)
       {
         $lookup: {
           from: 'users',
           localField: 'person',
           foreignField: '_id',
-          as: 'person',
+          as: 'userPerson',
         },
       },
-      { $unwind: '$person' },
+
+      // Lookup from registrations (only needed if personType = Registration)
+      {
+        $lookup: {
+          from: 'registrations',
+          localField: 'person',
+          foreignField: '_id',
+          as: 'registrationPerson',
+        },
+      },
+
+      // Merge into single `person`
+      {
+        $addFields: {
+          person: {
+            $cond: [
+              { $eq: [{ $ifNull: ['$personType', 'User'] }, 'User'] }, // default to User if missing
+              { $arrayElemAt: ['$userPerson', 0] },
+              { $arrayElemAt: ['$registrationPerson', 0] },
+            ],
+          },
+        },
+      },
+
+      // Cleanup
+      { $project: { userPerson: 0, registrationPerson: 0 } },
     ]
 
     if (searchRegex) {
