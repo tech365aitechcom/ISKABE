@@ -205,6 +205,7 @@ exports.getEventById = async (req, res) => {
   try {
     const { id } = req.params
 
+    // 🔹 Fetch Event with promoter + venue + createdBy
     const event = await Event.findById(id)
       .populate('venue')
       .populate({
@@ -226,38 +227,27 @@ exports.getEventById = async (req, res) => {
         .json({ success: false, message: 'Event not found' })
     }
 
-    // Get brackets related to this event
+    // 🔹 Get Brackets with populated fighters
     const brackets = await Bracket.find({ event: id })
-      .populate({
-        path: 'fighters',
-        select: 'firstName lastName weightClass country createdBy',
-        populate: {
-          path: 'createdBy',
-          select: 'fighterProfile',
-          populate: {
-            path: 'fighterProfile',
-            select: '_id',
-          },
-        },
-      })
+      .populate('fighters.fighter')
       .lean()
 
-    // Get all bracket IDs
+    // 🔹 Collect Bracket IDs
     const bracketIds = brackets.map((bracket) => bracket._id)
 
-    // Get bouts for all brackets
+    // 🔹 Get Bouts for these brackets
     const bouts = await Bout.find({ bracket: { $in: bracketIds } })
       .populate('redCorner')
       .populate('blueCorner')
       .lean()
 
-    // Get fights for all bouts
+    // 🔹 Get Fights for these bouts
     const boutIds = bouts.map((bout) => bout._id)
     const fights = await Fight.find({ bout: { $in: boutIds } })
       .populate('winner')
       .lean()
 
-    // Organize data structure
+    // 🔹 Organize Brackets → Bouts → Fights
     const bracketsWithDetails = brackets.map((bracket) => {
       const bracketBouts = bouts.filter(
         (bout) => bout.bracket.toString() === bracket._id.toString()
@@ -280,8 +270,8 @@ exports.getEventById = async (req, res) => {
       }
     })
 
+    // 🔹 Registered Fighters (outside brackets, direct event registrations)
     let registeredFighters = []
-
     if (event.registeredParticipants > 0) {
       const fighters = await Registration.find({
         event: id,
@@ -307,10 +297,12 @@ exports.getEventById = async (req, res) => {
       }))
     }
 
+    // 🔹 Counts
     const bracketCount = brackets.length
     const boutCount = bouts.length
     const fightCount = fights.length
 
+    // 🔹 Revenue Calcs
     const totalRegistrationFees = await Registration.aggregate([
       { $match: { event: new mongoose.Types.ObjectId(id) } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
@@ -322,9 +314,12 @@ exports.getEventById = async (req, res) => {
     ])
 
     const spectatorTicketTotal = totalSpectatorTicketAmount[0]?.total || 0
-    const totalFee = spectatorTicketTotal * process.env.TICKET_FEE_PERCENTAGE
+    const totalFee =
+      spectatorTicketTotal *
+      (parseFloat(process.env.TICKET_FEE_PERCENTAGE) || 0)
     const totalNetRevenue = spectatorTicketTotal - totalFee
 
+    // 🔹 Final Response
     res.json({
       success: true,
       data: {

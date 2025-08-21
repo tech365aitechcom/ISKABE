@@ -53,6 +53,10 @@ const HomepageConfigSchema = new Schema(
         ref: 'FighterProfile',
       },
     ],
+    featuredResult: {
+      type: Schema.Types.ObjectId,
+      ref: 'Fight',
+    },
     latestNews: {
       type: Schema.Types.ObjectId,
       ref: 'News',

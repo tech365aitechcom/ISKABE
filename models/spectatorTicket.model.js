@@ -73,7 +73,7 @@ const ticketTierSchema = new mongoose.Schema(
     limitPerUser: {
       type: Number,
       min: 0,
-      default: 0, // 0 = no limit
+      default: 0,
     },
     refundPolicyNotes: {
       type: String,

@@ -49,12 +49,12 @@ const registrationSchema = new mongoose.Schema(
     phoneNumber: { type: String, required: true },
 
     // Address
-    street1: { type: String, required: true },
+    street1: { type: String },
     street2: { type: String },
     country: { type: String },
     state: { type: String },
     city: { type: String },
-    postalCode: { type: String, required: true },
+    postalCode: { type: String },
 
     // Trainer-specific
     fightersRepresented: { type: String },

@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const spectatorTicketController = require('../controllers/spectatorTicket.controller')
 const spectatorTicketPurchaseController = require('../controllers/spectatorTicketPurchase.controller')
-const { protect } = require('../middlewares/auth.middleware')
+const { protect, optionalAuth } = require('../middlewares/auth.middleware')
 
 // Spectator Ticket
 router.post('/', protect, spectatorTicketController.createSpectatorTicket)
@@ -34,6 +34,10 @@ router.get(
 router.get(
   '/purchase/event/:eventId/redemption-logs',
   spectatorTicketPurchaseController.getEventRedemptionLogs
+)
+router.post(
+  '/check-limit',
+  spectatorTicketPurchaseController.checkMaxTicketLimit
 )
 
 module.exports = router

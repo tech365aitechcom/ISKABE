@@ -48,6 +48,28 @@ exports.getHomePageConfig = async (req, res) => {
             '-password -__v -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry',
         },
       })
+      .populate({
+        path: 'featuredResult',
+        populate: [
+          { path: 'event' },
+          { path: 'bracket' },
+          {
+            path: 'bout',
+            populate: [
+              { path: 'redCorner' },
+              { path: 'blueCorner' }
+            ]
+          },
+          {
+            path: 'winner',
+            populate: {
+              path: 'createdBy',
+              model: 'User',
+              select: 'firstName lastName email profilePhoto'
+            }
+          }
+        ]
+      })
       .lean()
 
     if (settings?.menuItems?.length) {

@@ -42,14 +42,23 @@ exports.buySpectatorTicket = async (req, res) => {
       return res.status(404).json({ message: 'Ticket tier not found' })
     }
 
+    // Check if tier is available for online purchase
+    if (tier.availabilityMode === 'OnSite') {
+      return res.status(400).json({
+        message: 'This ticket tier is only available for on-site purchase',
+      })
+    }
+
     const now = new Date()
-    if (
-      now < new Date(tier.salesStartDate) ||
-      now > new Date(tier.salesEndDate)
-    ) {
+
+    if (now < new Date(tier.salesStartDate)) {
       return res
         .status(400)
-        .json({ message: 'Tier not available for sale now' })
+        .json({ message: 'Ticket sales have not started yet' })
+    }
+
+    if (now > new Date(tier.salesEndDate)) {
+      return res.status(400).json({ message: 'Ticket sales have ended' })
     }
 
     if (tier.remaining < quantity) {
@@ -66,12 +75,6 @@ exports.buySpectatorTicket = async (req, res) => {
 
     if (buyerType === 'guest' && !guestDetails?.email) {
       return res.status(400).json({ message: 'Guest email is required' })
-    }
-
-    if (quantity > tier.limitPerUser) {
-      return res.status(400).json({
-        message: `You can only buy a maximum of ${tier.limitPerUser} tickets per user`,
-      })
     }
 
     let cashCodeDoc = null
@@ -103,6 +106,13 @@ exports.buySpectatorTicket = async (req, res) => {
         return res
           .status(400)
           .json({ message: 'Cash code does not belong to this event' })
+      }
+
+      const ticketTotalAmount = tier.price * quantity
+      if (cashCodeDoc.amountPaid < ticketTotalAmount) {
+        return res.status(400).json({
+          message: `Insufficient cash code amount. Required: $${ticketTotalAmount}, Available: $${cashCodeDoc.amountPaid}`,
+        })
       }
 
       if (cashCodeDoc.user) {
@@ -484,5 +494,115 @@ exports.getEventRedemptionLogs = async (req, res) => {
     return res
       .status(500)
       .json({ message: 'Internal server error', error: error.message })
+  }
+}
+
+exports.checkMaxTicketLimit = async (req, res) => {
+  try {
+    const { eventId, buyerType, userId, guestEmail } = req.body
+
+    if (!eventId || !buyerType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event ID and buyer type are required',
+      })
+    }
+
+    if (buyerType === 'user' && !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required for registered users',
+      })
+    }
+
+    if (buyerType === 'guest' && !guestEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Guest email is required for guest purchases',
+      })
+    }
+
+    // Get the ticket configuration for the event
+    const ticketConfig = await SpectatorTicket.findOne({ eventId })
+    if (!ticketConfig) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket configuration not found for this event',
+      })
+    }
+
+    // Build filter for existing purchases
+    let purchaseFilter = { event: eventId }
+
+    if (buyerType === 'user') {
+      purchaseFilter.user = userId
+      purchaseFilter.buyerType = 'user'
+    } else {
+      purchaseFilter.buyerType = 'guest'
+      purchaseFilter['guestDetails.email'] = guestEmail
+    }
+
+    // Get existing purchases by this user/guest for this event
+    const existingPurchases = await SpectatorTicketPurchase.find(purchaseFilter)
+
+    // Calculate purchased quantities by tier
+    const purchasedByTier = {}
+    let totalPurchased = 0
+
+    existingPurchases.forEach((purchase) => {
+      if (!purchasedByTier[purchase.tier]) {
+        purchasedByTier[purchase.tier] = 0
+      }
+      purchasedByTier[purchase.tier] += purchase.quantity
+      totalPurchased += purchase.quantity
+    })
+
+    // Check limits for each tier (only for online available tiers)
+    const tierLimits = {}
+    let hasReachedMaxLimit = false
+    let limitExceededTiers = []
+
+    // Filter tiers to only include those available for online purchase
+    const onlineAvailableTiers = ticketConfig.tiers.filter(
+      (tier) =>
+        tier.availabilityMode === 'Online' || tier.availabilityMode === 'Both'
+    )
+
+    onlineAvailableTiers.forEach((tier) => {
+      const purchased = purchasedByTier[tier.name] || 0
+      tierLimits[tier.name] = {
+        limitPerUser: tier.limitPerUser,
+        purchased: purchased,
+        remaining: tier.limitPerUser ? tier.limitPerUser - purchased : null,
+        canPurchaseMore: tier.limitPerUser
+          ? purchased < tier.limitPerUser
+          : true,
+      }
+
+      if (tier.limitPerUser && purchased >= tier.limitPerUser) {
+        hasReachedMaxLimit = true
+        limitExceededTiers.push(tier.name)
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Ticket limits checked successfully',
+      data: {
+        hasReachedMaxLimit,
+        limitExceededTiers,
+        totalPurchased,
+        tierLimits,
+        buyerType,
+        buyerIdentifier: buyerType === 'user' ? userId : guestEmail,
+      },
+    })
+  } catch (error) {
+    console.error('Error checking ticket limits:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message,
+    })
   }
 }
