@@ -116,10 +116,15 @@ exports.requestCashCode = async (req, res) => {
     }
 
     // Prevent duplicate code per event/date/user or name
+    const queryConditions = [{ email: resolvedEmail }]
+    if (userId) {
+      queryConditions.push({ user: userId })
+    }
+    
     const existingCode = await CashCode.findOne({
       event: eventId,
       eventDateCode,
-      $or: [{ user: userId || null }, { name: resolvedName }],
+      $or: queryConditions,
     })
 
     if (existingCode) {

@@ -24,6 +24,7 @@ exports.buySpectatorTicket = async (req, res) => {
       paymentStatus,
       cashCode: cashCodeText,
       transactionId,
+      role,
     } = req.body
 
     // Support both old single tier format and new multiple tiers format
@@ -35,10 +36,17 @@ exports.buySpectatorTicket = async (req, res) => {
       // Old format: single tier
       ticketsToProcess = [{ tierName, quantity }]
     } else {
-      return res.status(400).json({ message: 'Missing required fields: tickets or tierName/quantity' })
+      return res.status(400).json({
+        message: 'Missing required fields: tickets or tierName/quantity',
+      })
     }
 
-    if (!eventId || !buyerType || !paymentMethod || ticketsToProcess.length === 0) {
+    if (
+      !eventId ||
+      !buyerType ||
+      !paymentMethod ||
+      ticketsToProcess.length === 0
+    ) {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
@@ -56,10 +64,12 @@ exports.buySpectatorTicket = async (req, res) => {
     const validatedTiers = []
 
     for (const ticketItem of ticketsToProcess) {
-      const tier = ticketConfig.tiers.find((t) => t.name === ticketItem.tierName)
+      const tier = ticketConfig.tiers.find(
+        (t) => t.name === ticketItem.tierName
+      )
       if (!tier) {
-        return res.status(404).json({ 
-          message: `Ticket tier '${ticketItem.tierName}' not found` 
+        return res.status(404).json({
+          message: `Ticket tier '${ticketItem.tierName}' not found`,
         })
       }
 
@@ -73,20 +83,20 @@ exports.buySpectatorTicket = async (req, res) => {
       const now = new Date()
 
       if (now < new Date(tier.salesStartDate)) {
-        return res.status(400).json({ 
-          message: `Ticket sales have not started yet for tier '${ticketItem.tierName}'` 
+        return res.status(400).json({
+          message: `Ticket sales have not started yet for tier '${ticketItem.tierName}'`,
         })
       }
 
       if (now > new Date(tier.salesEndDate)) {
-        return res.status(400).json({ 
-          message: `Ticket sales have ended for tier '${ticketItem.tierName}'` 
+        return res.status(400).json({
+          message: `Ticket sales have ended for tier '${ticketItem.tierName}'`,
         })
       }
 
       if (tier.remaining < ticketItem.quantity) {
-        return res.status(400).json({ 
-          message: `Not enough tickets remaining in tier '${ticketItem.tierName}'. Only ${tier.remaining} available.` 
+        return res.status(400).json({
+          message: `Not enough tickets remaining in tier '${ticketItem.tierName}'. Only ${tier.remaining} available.`,
         })
       }
 
@@ -99,7 +109,7 @@ exports.buySpectatorTicket = async (req, res) => {
         tierName: ticketItem.tierName,
         quantity: ticketItem.quantity,
         price: tier.price,
-        tierObject: tier
+        tierObject: tier,
       })
     }
 
@@ -146,7 +156,14 @@ exports.buySpectatorTicket = async (req, res) => {
 
       if (cashCodeDoc.amountPaid < totalAmount) {
         return res.status(400).json({
-          message: `Insufficient cash code amount. Required: $${totalAmount}, Available: $${cashCodeDoc.amountPaid}`,
+          message: `Insufficient cash code amount.`,
+        })
+      }
+
+      // Check if role matches when role is provided in payload
+      if (role && cashCodeDoc.role !== role) {
+        return res.status(400).json({
+          message: `Cash code not found for ${role}`,
         })
       }
 
@@ -189,10 +206,10 @@ exports.buySpectatorTicket = async (req, res) => {
       event: eventId,
       ticket: ticketConfig._id,
       tier: mainTierName,
-      tiers: validatedTiers.map(t => ({
+      tiers: validatedTiers.map((t) => ({
         tierName: t.tierName,
         quantity: t.quantity,
-        price: t.price
+        price: t.price,
       })),
       quantity: totalQuantity,
       buyerType,
@@ -210,7 +227,7 @@ exports.buySpectatorTicket = async (req, res) => {
     await purchase.save()
 
     // Decrement remaining count for all tiers
-    validatedTiers.forEach(validatedTier => {
+    validatedTiers.forEach((validatedTier) => {
       validatedTier.tierObject.remaining -= validatedTier.quantity
     })
     ticketConfig.markModified('tiers')
