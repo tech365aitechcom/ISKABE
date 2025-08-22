@@ -76,31 +76,25 @@ exports.requestCashCode = async (req, res) => {
     let resolvedName = name
     let resolvedEmail = email
     let resolvedPhoneNumber = phoneNumber
-
+    let user = null
     if (userId) {
-      let user_id = userId
       if (role === roles.fighter) {
-        const fighter = await FighterProfile.findOne({
+        const fighter = await User.findOne({
           _id: new mongoose.Types.ObjectId(userId),
         })
         if (!fighter)
           return res.status(404).json({ message: 'Fighter not found' })
-        user_id = fighter.userId
+        user = fighter
       } else if (role === roles.trainer) {
-        const trainer = await TrainerProfile.findOne({
-          _id: new mongoose.Types.ObjectId(userId),
-        })
+        console.log({ userId })
+        const trainer = await User.findById(userId)
+        console.log({ trainer })
         if (!trainer)
           return res
             .status(404)
             .json({ success: false, message: 'Trainer not found' })
-        user_id = trainer.userId
+        user = trainer
       }
-      const user = await User.findById(user_id)
-      if (!user)
-        return res
-          .status(404)
-          .json({ success: false, message: 'User not found' })
 
       resolvedName = `${user.firstName} ${user.lastName}`
       resolvedEmail = user.email
@@ -120,7 +114,7 @@ exports.requestCashCode = async (req, res) => {
     if (userId) {
       queryConditions.push({ user: userId })
     }
-    
+
     const existingCode = await CashCode.findOne({
       event: eventId,
       eventDateCode,
@@ -129,7 +123,7 @@ exports.requestCashCode = async (req, res) => {
 
     if (existingCode) {
       return res.status(200).json({
-        message: 'Code already exists for this user and event date.',
+        message: 'Code already exists for this user and event.',
         data: {
           code: existingCode.code,
           name: existingCode.name,
