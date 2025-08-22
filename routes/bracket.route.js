@@ -7,6 +7,7 @@ router.post('/', protect, bracketController.createBracket)
 router.get('/', bracketController.getAllBrackets)
 router.get('/:id', bracketController.getBracketById)
 router.put('/:id', bracketController.updateBracket)
+router.put('/:id/reset', protect, bracketController.resetBracket)
 router.delete('/:id', bracketController.deleteBracket)
 
 module.exports = router

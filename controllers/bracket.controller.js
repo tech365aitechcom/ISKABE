@@ -22,13 +22,13 @@ exports.createBracket = async (req, res) => {
     if (bracketNumber) {
       const existingBracket = await Bracket.findOne({
         event,
-        bracketNumber
+        bracketNumber,
       })
 
       if (existingBracket) {
         return res.status(409).json({
           success: false,
-          message: `Bracket number ${bracketNumber} already exists for this event.`
+          message: `Bracket number ${bracketNumber} already exists for this event.`,
         })
       }
     }
@@ -108,7 +108,7 @@ exports.getAllBrackets = async (req, res) => {
     const activeSuspensions = await Suspension.find({
       person: { $in: Array.from(fighterIds) },
       personType: 'Registration',
-      status: 'Active'
+      status: 'Active',
     }).lean()
 
     // Create suspension lookup map by fighter ID
@@ -122,23 +122,25 @@ exports.getAllBrackets = async (req, res) => {
     // Add suspension data to bouts
     const boutsWithSuspensions = allBouts.map((bout) => {
       const updatedBout = { ...bout }
-      
+
       if (bout.redCorner?._id) {
-        const redCornerSuspensions = suspensionMap[bout.redCorner._id.toString()] || []
+        const redCornerSuspensions =
+          suspensionMap[bout.redCorner._id.toString()] || []
         updatedBout.redCorner = {
           ...bout.redCorner,
-          suspensions: redCornerSuspensions
+          suspensions: redCornerSuspensions,
         }
       }
-      
+
       if (bout.blueCorner?._id) {
-        const blueCornerSuspensions = suspensionMap[bout.blueCorner._id.toString()] || []
+        const blueCornerSuspensions =
+          suspensionMap[bout.blueCorner._id.toString()] || []
         updatedBout.blueCorner = {
           ...bout.blueCorner,
-          suspensions: blueCornerSuspensions
+          suspensions: blueCornerSuspensions,
         }
       }
-      
+
       return updatedBout
     })
 
@@ -218,17 +220,20 @@ exports.updateBracket = async (req, res) => {
     }
 
     // Check if bracketNumber is being updated and if it would create a duplicate
-    if (updateData.bracketNumber && updateData.bracketNumber !== existingBracket.bracketNumber) {
+    if (
+      updateData.bracketNumber &&
+      updateData.bracketNumber !== existingBracket.bracketNumber
+    ) {
       const duplicateBracket = await Bracket.findOne({
         event: existingBracket.event,
         bracketNumber: updateData.bracketNumber,
-        _id: { $ne: bracketId } // Exclude current bracket from search
+        _id: { $ne: bracketId }, // Exclude current bracket from search
       })
 
       if (duplicateBracket) {
         return res.status(409).json({
           success: false,
-          message: `Bracket number ${updateData.bracketNumber} already exists for this event.`
+          message: `Bracket number ${updateData.bracketNumber} already exists for this event.`,
         })
       }
     }
@@ -246,7 +251,8 @@ exports.updateBracket = async (req, res) => {
         })
       }
 
-      const maxAllowed = tournamentSettings.bracketSettings.maxFightersPerBracket
+      const maxAllowed =
+        tournamentSettings.bracketSettings.maxFightersPerBracket
 
       if (updateData.maxCompetitors > maxAllowed) {
         return res.status(400).json({
@@ -285,6 +291,57 @@ exports.updateBracket = async (req, res) => {
     })
   } catch (error) {
     res.status(400).json({ success: false, message: error.message })
+  }
+}
+
+exports.resetBracket = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { id: userId, role } = req.user
+
+    if (role !== roles.superAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not allowed to reset brackets.',
+      })
+    }
+
+    const bracket = await Bracket.findById(id)
+
+    if (!bracket) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'Bracket not found' })
+    }
+
+    // Delete all bouts and their fights but preserve bracket structure
+    const bouts = await Bout.find({ bracket: id })
+
+    for (const bout of bouts) {
+      await Fight.deleteMany({ bout: bout._id })
+    }
+
+    await Bout.deleteMany({ bracket: id })
+
+    await Bracket.findByIdAndUpdate(id, {
+      status: 'Open',
+      bouts: [],
+      fighters: [],
+      updatedAt: new Date(),
+    })
+
+    res.status(200).json({
+      success: true,
+      message:
+        'Bracket reset successfully. All bouts and results have been cleared.',
+    })
+  } catch (error) {
+    console.error('Error in resetBracket:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset bracket',
+      error: error.message,
+    })
   }
 }
 
