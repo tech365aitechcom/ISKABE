@@ -63,6 +63,21 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
     tier: {
       type: String,
     },
+    tiers: [{
+      tierName: {
+        type: String,
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      price: {
+        type: Number,
+        required: true,
+      }
+    }],
     quantity: {
       type: Number,
       required: true,

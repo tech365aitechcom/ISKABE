@@ -82,6 +82,7 @@ exports.sendTicketConfirmationEmail = async ({
   eventLink,
   purchaseDate,
   tierTitle,
+  tiers,
   quantity,
   totalAmount,
   ticketCode,
@@ -107,6 +108,10 @@ exports.sendTicketConfirmationEmail = async ({
           <p>You purchased ${quantity} ticket(s) for the following event: 
             <a href="${eventLink}" style="color:#0000ee;">${eventTitle}</a>
           </p>
+          ${tiers && tiers.length > 1 
+            ? `<p style="font-size:14px;">Your purchase includes multiple ticket tiers as detailed below.</p>`
+            : ''
+          }
           <div style="text-align:center;margin:20px 0;">
             <img src="cid:qrCode123" alt="QR Code" style="width:200px;height:200px;" />
           </div>
@@ -120,13 +125,33 @@ exports.sendTicketConfirmationEmail = async ({
           </p>
 
           <h4>Purchase Summary:</h4>
-          <ul style="font-size:14px;list-style:none;padding-left:0;">
-            <li><strong>Purchase Date:</strong> ${purchaseDate}</li>
-            <li><strong>Total Paid:</strong> $${totalAmount}</li>
-            <li><strong>Ticket Type:</strong> ${tierTitle} (${quantity} @ $${(
-      totalAmount / quantity
-    ).toFixed(2)} each)</li>
-          </ul>
+          <div style="background-color:#f8f9fa;padding:15px;border-radius:8px;margin:15px 0;">
+            <p style="margin:5px 0;"><strong>Purchase Date:</strong> ${new Date(purchaseDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            
+            <h5 style="margin:15px 0 10px 0;color:#333;">Tickets Purchased:</h5>
+            <table style="width:100%;border-collapse:collapse;margin:10px 0;">
+              ${tiers && tiers.length > 0 
+                ? tiers.map(tier => 
+                    `<tr style="border-bottom:1px solid #ddd;">
+                      <td style="padding:8px 0;font-weight:500;">${tier.tierName}</td>
+                      <td style="padding:8px 0;text-align:center;">${tier.quantity}</td>
+                      <td style="padding:8px 0;text-align:right;">$${tier.price.toFixed(2)}</td>
+                      <td style="padding:8px 0;text-align:right;font-weight:bold;">$${(tier.price * tier.quantity).toFixed(2)}</td>
+                    </tr>`
+                  ).join('')
+                : `<tr style="border-bottom:1px solid #ddd;">
+                    <td style="padding:8px 0;font-weight:500;">${tierTitle}</td>
+                    <td style="padding:8px 0;text-align:center;">${quantity}</td>
+                    <td style="padding:8px 0;text-align:right;">$${(totalAmount / quantity).toFixed(2)}</td>
+                    <td style="padding:8px 0;text-align:right;font-weight:bold;">$${totalAmount.toFixed(2)}</td>
+                  </tr>`
+              }
+              <tr style="border-top:2px solid #333;background-color:#e9ecef;">
+                <td style="padding:12px 0;font-weight:bold;" colspan="3">Total Amount</td>
+                <td style="padding:12px 0;text-align:right;font-weight:bold;font-size:18px;color:#28a745;">$${totalAmount.toFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
 
           <p style="font-size:12px;margin-top:20px;">
             If you have any questions, contact us at <a href="mailto:ikffightplatform@gmail.com">ikffightplatform@gmail.com</a>.

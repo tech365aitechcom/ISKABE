@@ -16,6 +16,7 @@ exports.buySpectatorTicket = async (req, res) => {
       eventId,
       tierName,
       quantity,
+      tickets,
       buyerType,
       user,
       guestDetails,
@@ -25,7 +26,19 @@ exports.buySpectatorTicket = async (req, res) => {
       transactionId,
     } = req.body
 
-    if (!eventId || !tierName || !quantity || !buyerType || !paymentMethod) {
+    // Support both old single tier format and new multiple tiers format
+    let ticketsToProcess = []
+    if (tickets && Array.isArray(tickets)) {
+      // New format: multiple tiers
+      ticketsToProcess = tickets
+    } else if (tierName && quantity) {
+      // Old format: single tier
+      ticketsToProcess = [{ tierName, quantity }]
+    } else {
+      return res.status(400).json({ message: 'Missing required fields: tickets or tierName/quantity' })
+    }
+
+    if (!eventId || !buyerType || !paymentMethod || ticketsToProcess.length === 0) {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
@@ -37,34 +50,57 @@ exports.buySpectatorTicket = async (req, res) => {
         .json({ message: 'Ticket not found for this event' })
     }
 
-    const tier = ticketConfig.tiers.find((t) => t.name === tierName)
-    if (!tier) {
-      return res.status(404).json({ message: 'Ticket tier not found' })
-    }
+    // Validate all tiers and calculate totals
+    let totalAmount = 0
+    let totalQuantity = 0
+    const validatedTiers = []
 
-    // Check if tier is available for online purchase
-    if (tier.availabilityMode === 'OnSite') {
-      return res.status(400).json({
-        message: 'This ticket tier is only available for on-site purchase',
+    for (const ticketItem of ticketsToProcess) {
+      const tier = ticketConfig.tiers.find((t) => t.name === ticketItem.tierName)
+      if (!tier) {
+        return res.status(404).json({ 
+          message: `Ticket tier '${ticketItem.tierName}' not found` 
+        })
+      }
+
+      // Check if tier is available for online purchase
+      if (tier.availabilityMode === 'OnSite') {
+        return res.status(400).json({
+          message: `Ticket tier '${ticketItem.tierName}' is only available for on-site purchase`,
+        })
+      }
+
+      const now = new Date()
+
+      if (now < new Date(tier.salesStartDate)) {
+        return res.status(400).json({ 
+          message: `Ticket sales have not started yet for tier '${ticketItem.tierName}'` 
+        })
+      }
+
+      if (now > new Date(tier.salesEndDate)) {
+        return res.status(400).json({ 
+          message: `Ticket sales have ended for tier '${ticketItem.tierName}'` 
+        })
+      }
+
+      if (tier.remaining < ticketItem.quantity) {
+        return res.status(400).json({ 
+          message: `Not enough tickets remaining in tier '${ticketItem.tierName}'. Only ${tier.remaining} available.` 
+        })
+      }
+
+      // Calculate totals
+      totalAmount += tier.price * ticketItem.quantity
+      totalQuantity += ticketItem.quantity
+
+      // Store validated tier info
+      validatedTiers.push({
+        tierName: ticketItem.tierName,
+        quantity: ticketItem.quantity,
+        price: tier.price,
+        tierObject: tier
       })
-    }
-
-    const now = new Date()
-
-    if (now < new Date(tier.salesStartDate)) {
-      return res
-        .status(400)
-        .json({ message: 'Ticket sales have not started yet' })
-    }
-
-    if (now > new Date(tier.salesEndDate)) {
-      return res.status(400).json({ message: 'Ticket sales have ended' })
-    }
-
-    if (tier.remaining < quantity) {
-      return res
-        .status(400)
-        .json({ message: 'Not enough tickets remaining in this tier' })
     }
 
     if (buyerType === 'user' && !user) {
@@ -108,10 +144,9 @@ exports.buySpectatorTicket = async (req, res) => {
           .json({ message: 'Cash code does not belong to this event' })
       }
 
-      const ticketTotalAmount = tier.price * quantity
-      if (cashCodeDoc.amountPaid < ticketTotalAmount) {
+      if (cashCodeDoc.amountPaid < totalAmount) {
         return res.status(400).json({
-          message: `Insufficient cash code amount. Required: $${ticketTotalAmount}, Available: $${cashCodeDoc.amountPaid}`,
+          message: `Insufficient cash code amount. Required: $${totalAmount}, Available: $${cashCodeDoc.amountPaid}`,
         })
       }
 
@@ -144,15 +179,22 @@ exports.buySpectatorTicket = async (req, res) => {
       }
     }
 
-    const totalAmount = tier.price * quantity
     const ticketCode = generateTicketCode()
     const qrCodeBuffer = await generateQRCode(ticketCode)
+
+    // For backward compatibility, use the first tier name as the main tier
+    const mainTierName = validatedTiers[0].tierName
 
     const purchase = new SpectatorTicketPurchase({
       event: eventId,
       ticket: ticketConfig._id,
-      tier: tierName,
-      quantity,
+      tier: mainTierName,
+      tiers: validatedTiers.map(t => ({
+        tierName: t.tierName,
+        quantity: t.quantity,
+        price: t.price
+      })),
+      quantity: totalQuantity,
       buyerType,
       user: buyerType === 'user' ? user : null,
       guestDetails: buyerType === 'guest' ? guestDetails : undefined,
@@ -167,8 +209,10 @@ exports.buySpectatorTicket = async (req, res) => {
 
     await purchase.save()
 
-    // Decrement remaining count
-    tier.remaining -= quantity
+    // Decrement remaining count for all tiers
+    validatedTiers.forEach(validatedTier => {
+      validatedTier.tierObject.remaining -= validatedTier.quantity
+    })
     ticketConfig.markModified('tiers')
     await ticketConfig.save()
 
@@ -199,8 +243,9 @@ exports.buySpectatorTicket = async (req, res) => {
       eventTitle: event.name,
       eventLink: `https://ikffe.vercel.app/events/${eventId}`,
       purchaseDate: new Date().toISOString(),
-      tierTitle: tierName,
-      quantity,
+      tierTitle: mainTierName, // Keep for backward compatibility
+      tiers: validatedTiers, // New field for multiple tiers
+      quantity: totalQuantity,
       totalAmount,
       ticketCode,
       qrCodeBuffer,

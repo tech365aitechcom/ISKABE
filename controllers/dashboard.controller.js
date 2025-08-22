@@ -114,9 +114,21 @@ exports.getDashboardData = async (req, res) => {
         },
       },
       {
+        $addFields: {
+          tierList: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ['$tiers', []] } }, 0] },
+              then: '$tiers',
+              else: [{ tierName: '$tier', quantity: '$quantity' }],
+            },
+          },
+        },
+      },
+      { $unwind: '$tierList' },
+      {
         $group: {
-          _id: '$tier',
-          count: { $sum: 1 },
+          _id: '$tierList.tierName',
+          count: { $sum: '$tierList.quantity' },
         },
       },
       {
@@ -381,7 +393,12 @@ exports.getDashboardData = async (req, res) => {
     const spectatorTicketLogs = await SpectatorTicketPurchase.find()
       .sort({ createdAt: -1 })
       .limit(4)
-      .populate('event')
+      .populate({
+        path: 'event',
+        populate: {
+          path: 'venue',
+        },
+      })
 
     res.status(200).json({
       success: true,
