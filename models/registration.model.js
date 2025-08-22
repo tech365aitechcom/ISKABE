@@ -103,6 +103,9 @@ const registrationSchema = new mongoose.Schema(
     paymentNotes: {
       type: String,
     },
+    missingPaymentsNotes: {
+      type: String,
+    },
     paymentStatus: {
       type: String,
       enum: ['Paid', 'Pending', 'Failed'],
@@ -127,14 +130,24 @@ const registrationSchema = new mongoose.Schema(
       enum: ['Pending', 'Rejected', 'Verified'],
       default: 'Pending',
     },
+    
+    // Weigh-in Info
     weighInDate: {
       type: Date,
     },
+    isOfficialWeight: {
+      type: Boolean,
+      default: false,
+    },
+    
+    // Check-in Status
     checkInStatus: {
       type: String,
       enum: ['Checked In', 'Not Checked', 'No Show'],
       default: 'Not Checked',
     },
+    
+    // Medical & Compliance
     medicalExamDone: {
       type: Boolean,
       default: false,
@@ -148,12 +161,34 @@ const registrationSchema = new mongoose.Schema(
     hotelConfirmationNumber: {
       type: String,
     },
+    suspensions: {
+      type: String,
+      enum: ['None', 'Warning', 'Flagged'],
+      default: 'None',
+    },
+    
+    // Emergency & Safety (NEW REQUIRED FIELDS)
+    emergencyContactName: {
+      type: String,
+    },
+    emergencyContactPhone: {
+      type: String,
+    },
+    
+    // Regulatory (NEW REQUIRED FIELDS)
+    countryOfOrigin: {
+      type: String,
+    },
+    
+    // Experience
     lastEvent: {
       type: String,
     },
     skillRank: {
       type: String,
     },
+    
+    // Legal
     parentalConsentUploaded: {
       type: Boolean,
       default: false,
