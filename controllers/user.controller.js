@@ -15,6 +15,110 @@ const generateVerificationToken = () => {
   return crypto.randomBytes(20).toString('hex')
 }
 
+// Helper function to check suspension status
+const checkSuspensionStatus = async (userId) => {
+  const activeSuspensions = await Suspension.find({
+    person: userId,
+    status: 'Active'
+  }).populate('sportingEventUID')
+
+  if (activeSuspensions.length === 0) {
+    // Update user suspension status if no active suspensions
+    await User.findByIdAndUpdate(userId, { isSuspended: false })
+    return { isSuspended: false }
+  }
+
+  const currentDate = new Date()
+  const expiredSuspensions = []
+  let hasActiveSuspension = false
+  
+  for (const suspension of activeSuspensions) {
+    let suspensionExpired = false
+
+    // Check for indefinite suspension
+    if (suspension.indefinite) {
+      hasActiveSuspension = true
+      return {
+        isSuspended: true,
+        type: 'indefinite',
+        reason: suspension.type,
+        message: `Your account is indefinitely suspended due to ${suspension.type.toLowerCase()} reasons. Please contact support.`,
+        suspensionDetails: suspension
+      }
+    }
+
+    // Medical suspension - requires clearance
+    if (suspension.type === 'Medical' && !suspension.medicalClearance) {
+      hasActiveSuspension = true
+      return {
+        isSuspended: true,
+        type: 'medical',
+        reason: 'Medical clearance required',
+        message: 'Your account is suspended pending medical clearance. Please submit required medical documentation.',
+        suspensionDetails: suspension
+      }
+    }
+
+    // Check days without training
+    if (suspension.daysWithoutTraining) {
+      const daysSinceIncident = Math.floor((currentDate - new Date(suspension.incidentDate)) / (1000 * 60 * 60 * 24))
+      if (daysSinceIncident < suspension.daysWithoutTraining) {
+        hasActiveSuspension = true
+        const remainingDays = suspension.daysWithoutTraining - daysSinceIncident
+        return {
+          isSuspended: true,
+          type: 'training',
+          reason: 'Training suspension active',
+          message: `You are suspended from training for ${remainingDays} more days (until ${new Date(new Date(suspension.incidentDate).getTime() + suspension.daysWithoutTraining * 24 * 60 * 60 * 1000).toLocaleDateString()}).`,
+          suspensionDetails: suspension,
+          remainingDays
+        }
+      } else {
+        suspensionExpired = true
+      }
+    }
+
+    // Check days before competing
+    if (suspension.daysBeforeCompeting) {
+      const daysSinceIncident = Math.floor((currentDate - new Date(suspension.incidentDate)) / (1000 * 60 * 60 * 24))
+      if (daysSinceIncident < suspension.daysBeforeCompeting) {
+        hasActiveSuspension = true
+        const remainingDays = suspension.daysBeforeCompeting - daysSinceIncident
+        return {
+          isSuspended: true,
+          type: 'competition',
+          reason: 'Competition suspension active',
+          message: `You are suspended from competing for ${remainingDays} more days (until ${new Date(new Date(suspension.incidentDate).getTime() + suspension.daysBeforeCompeting * 24 * 60 * 60 * 1000).toLocaleDateString()}).`,
+          suspensionDetails: suspension,
+          remainingDays
+        }
+      } else {
+        suspensionExpired = true
+      }
+    }
+
+    // Mark suspension for closure if expired
+    if (suspensionExpired) {
+      expiredSuspensions.push(suspension._id)
+    }
+  }
+
+  // Close expired suspensions
+  if (expiredSuspensions.length > 0) {
+    await Suspension.updateMany(
+      { _id: { $in: expiredSuspensions } },
+      { status: 'Closed' }
+    )
+  }
+
+  // Update user suspension status based on active suspensions
+  if (!hasActiveSuspension) {
+    await User.findByIdAndUpdate(userId, { isSuspended: false })
+  }
+
+  return { isSuspended: hasActiveSuspension }
+}
+
 exports.signup = async (req, res) => {
   const errors = validationResult(req)
   if (!errors.isEmpty()) {
@@ -110,6 +214,26 @@ exports.login = async (req, res) => {
       return res.status(404).json({ message: 'Email not registered' })
     }
 
+    // Check comprehensive suspension status
+    const suspensionCheck = await checkSuspensionStatus(user._id)
+    if (suspensionCheck.isSuspended) {
+      return res.status(403).json({
+        message: suspensionCheck.message,
+        suspensionType: suspensionCheck.type,
+        reason: suspensionCheck.reason,
+        ...(suspensionCheck.remainingDays && { remainingDays: suspensionCheck.remainingDays }),
+        suspensionDetails: {
+          incidentDate: suspensionCheck.suspensionDetails.incidentDate,
+          type: suspensionCheck.suspensionDetails.type,
+          description: suspensionCheck.suspensionDetails.description,
+          ...(suspensionCheck.suspensionDetails.sportingEventUID && { 
+            event: suspensionCheck.suspensionDetails.sportingEventUID.name 
+          })
+        }
+      })
+    }
+
+    // Legacy suspension check (fallback)
     if (user.isSuspended) {
       return res
         .status(403)

@@ -5,6 +5,7 @@ const connectDB = require('./config/db')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const { uploadS3, upload } = require('./config/s3')
+const SuspensionService = require('./services/suspension.service')
 
 const masterRoutes = require('./routes/master.route')
 const userRoutes = require('./routes/user.route')
@@ -83,6 +84,31 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 const port = process.env.PORT || 3000
 
 connectDB()
+
+// Simple scheduler for suspension cleanup (runs every hour)
+const runSuspensionCleanup = () => {
+  setInterval(async () => {
+    try {
+      await SuspensionService.runCleanupJob()
+    } catch (error) {
+      console.error('Scheduled suspension cleanup failed:', error)
+    }
+  }, 60 * 60 * 1000) // Run every hour
+}
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
+  
+  // Start suspension cleanup scheduler
+  runSuspensionCleanup()
+  console.log('Suspension cleanup scheduler started (runs every hour)')
+  
+  // Run initial cleanup
+  setTimeout(async () => {
+    try {
+      await SuspensionService.runCleanupJob()
+    } catch (error) {
+      console.error('Initial suspension cleanup failed:', error)
+    }
+  }, 5000) // Wait 5 seconds after server start
 })
