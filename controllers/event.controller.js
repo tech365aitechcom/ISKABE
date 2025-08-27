@@ -370,10 +370,22 @@ exports.updateEvent = async (req, res) => {
     Object.assign(event, req.body)
     const updatedEvent = await event.save()
 
+    // Populate promoter and venue fields for the response
+    const populatedEvent = await Event.findById(updatedEvent._id)
+      .populate('venue')
+      .populate({
+        path: 'promoter',
+        populate: {
+          path: 'userId',
+          select:
+            '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v',
+        },
+      })
+
     res.json({
       success: true,
       message: 'Event updated successfully',
-      data: updatedEvent,
+      data: populatedEvent,
     })
   } catch (error) {
     console.error('Update event error:', error)
