@@ -133,4 +133,7 @@ router.post(
 // Get fighter system record by email
 router.get('/fighter/system-record/:email', authController.getFighterSystemRecord)
 
+// Refresh token route
+router.post('/refresh-token', authController.refreshToken)
+
 module.exports = router

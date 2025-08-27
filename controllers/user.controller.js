@@ -667,3 +667,99 @@ exports.getFighterSystemRecord = async (req, res) => {
     })
   }
 }
+
+exports.refreshToken = async (req, res) => {
+  const token = req.headers.authorization && req.headers.authorization.split(' ')[1]
+
+  if (!token) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'No token provided',
+      requiresLogin: true 
+    })
+  }
+
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret)
+    
+    // Find user to ensure they still exist and are not suspended
+    const user = await User.findById(decoded.id).select(
+      '-password -createdAt -updatedAt -__v -verificationToken -verificationTokenExpiry -resetPasswordToken -resetPasswordExpiry'
+    )
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found',
+        requiresLogin: true 
+      })
+    }
+
+    // Check comprehensive suspension status
+    const suspensionCheck = await checkSuspensionStatus(user._id)
+    if (suspensionCheck.isSuspended) {
+      return res.status(403).json({
+        success: false,
+        message: suspensionCheck.message,
+        suspensionType: suspensionCheck.type,
+        reason: suspensionCheck.reason,
+        requiresLogin: true,
+        ...(suspensionCheck.remainingDays && { remainingDays: suspensionCheck.remainingDays })
+      })
+    }
+
+    // Legacy suspension check (fallback)
+    if (user.isSuspended) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Your account has been suspended by the admin.',
+        requiresLogin: true 
+      })
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Account not verified. Please check your email.',
+        requiresLogin: true 
+      })
+    }
+
+    // Generate new token
+    const newToken = jwt.sign(
+      { id: user._id, role: user.role },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    )
+
+    const userObj = user.toObject()
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Token refreshed successfully', 
+      token: newToken, 
+      user: userObj 
+    })
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token expired',
+        requiresLogin: true 
+      })
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid token',
+        requiresLogin: true 
+      })
+    }
+    
+    console.error('Refresh token error:', error)
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Something went wrong during token refresh',
+      requiresLogin: true 
+    })
+  }
+}
