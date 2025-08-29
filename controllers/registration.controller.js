@@ -174,7 +174,7 @@ exports.getRegistrations = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Registrations list fetched22222222',
+      message: 'Registrations list fetched successfully',
       data: {
         items: registrations,
         pagination: {
