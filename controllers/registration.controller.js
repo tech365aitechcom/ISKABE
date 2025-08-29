@@ -134,6 +134,7 @@ exports.getRegistrations = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
+    console.log({ filter })
     // Base query
     let registrations = await Registration.find(filter)
       .sort({ updatedAt: -1 })
@@ -169,15 +170,17 @@ exports.getRegistrations = async (req, res) => {
       })
     }
 
+    const total = await Registration.countDocuments(filter)
+
     res.json({
       success: true,
-      message: 'Registrations list fetched',
+      message: 'Registrations list fetched22222222',
       data: {
         items: registrations,
         pagination: {
-          totalItems: registrations.length,
+          totalItems: total,
           currentPage: parseInt(page),
-          totalPages: Math.ceil(registrations.length / limit),
+          totalPages: Math.ceil(total / limit),
           pageSize: parseInt(limit),
         },
       },
