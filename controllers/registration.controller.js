@@ -367,12 +367,6 @@ exports.deleteRegistration = async (req, res) => {
         { 'fighters.fighter': registration._id },
         { $pull: { fighters: { fighter: registration._id } } }
       )
-
-      // Delete empty brackets (optional - or mark as cancelled)
-      await Bracket.deleteMany({
-        event: registration.event,
-        $expr: { $eq: [{ $size: '$fighters' }, 0] }
-      })
     }
 
     await Registration.findByIdAndDelete(req.params.id)
@@ -394,7 +388,10 @@ const calculateAge = (dateOfBirth) => {
   let age = today.getFullYear() - birthDate.getFullYear()
   const monthDiff = today.getMonth() - birthDate.getMonth()
 
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+  if (
+    monthDiff < 0 ||
+    (monthDiff === 0 && today.getDate() < birthDate.getDate())
+  ) {
     age--
   }
 
@@ -412,28 +409,22 @@ const getAgeGroup = (dateOfBirth) => {
 }
 
 // Helper function to generate bracket criteria string
-const generateBracketCriteria = (fighter) => {
-  const ageGroup = getAgeGroup(fighter.dateOfBirth)
-  const criteria = []
+const generateBracketCriteria = (skillLevel) => {
+  if (!skillLevel || typeof skillLevel !== 'string') return ''
 
-  if (fighter.gender) criteria.push(fighter.gender)
-  criteria.push(ageGroup)
-  if (fighter.weightClass) criteria.push(fighter.weightClass)
-  if (fighter.skillLevel) criteria.push(fighter.skillLevel)
-  if (fighter.ruleStyle) criteria.push(fighter.ruleStyle)
-
-  return criteria.join(' - ')
+  // Split at ":" and return the trimmed first part
+  return skillLevel.split(':')[0].trim()
 }
 
 // Helper function to generate division title
 const generateDivisionTitle = (fighter) => {
-  const ageGroup = getAgeGroup(fighter.dateOfBirth)
   const parts = []
 
   if (fighter.gender) parts.push(fighter.gender)
-  parts.push(ageGroup)
+  if (fighter.skillLevel) {
+    parts.push(generateBracketCriteria(fighter.skillLevel))
+  }
   if (fighter.weightClass) parts.push(fighter.weightClass)
-  if (fighter.ruleStyle) parts.push(fighter.ruleStyle)
 
   return parts.join(' ')
 }
@@ -443,16 +434,25 @@ const autoAssignToBracket = async (registration) => {
   try {
     const ageGroup = getAgeGroup(registration.dateOfBirth)
 
+    // Fetch the event to get sport information
+    const event = await Event.findById(registration.event)
+
     // Find matching brackets that are still open and have space
     const matchingBrackets = await Bracket.find({
       event: registration.event,
       status: 'Open',
       $expr: { $lt: [{ $size: '$fighters' }, 4] }, // Less than 4 fighters
       // Match criteria
-      ...(registration.gender && { 'bracketCriteria': { $regex: registration.gender, $options: 'i' } }),
-      'bracketCriteria': { $regex: ageGroup, $options: 'i' },
-      ...(registration.weightClass && { 'bracketCriteria': { $regex: registration.weightClass, $options: 'i' } }),
-      ...(registration.ruleStyle && { 'bracketCriteria': { $regex: registration.ruleStyle, $options: 'i' } })
+      ...(registration.gender && {
+        bracketCriteria: { $regex: registration.gender, $options: 'i' },
+      }),
+      bracketCriteria: { $regex: ageGroup, $options: 'i' },
+      ...(registration.weightClass && {
+        bracketCriteria: { $regex: registration.weightClass, $options: 'i' },
+      }),
+      ...(registration.ruleStyle && {
+        bracketCriteria: { $regex: registration.ruleStyle, $options: 'i' },
+      }),
     }).sort({ 'fighters.length': -1 }) // Prioritize brackets with more fighters
 
     let targetBracket = null
@@ -468,15 +468,19 @@ const autoAssignToBracket = async (registration) => {
         $push: {
           fighters: {
             fighter: registration._id,
-            seed: nextSeed
-          }
-        }
+            seed: nextSeed,
+          },
+        },
       })
 
-      console.log(`Fighter ${registration.firstName} ${registration.lastName} assigned to existing bracket ${targetBracket.bracketNumber} as seed ${nextSeed}`)
+      console.log(
+        `Fighter ${registration.firstName} ${registration.lastName} assigned to existing bracket ${targetBracket.bracketNumber} as seed ${nextSeed}`
+      )
     } else {
       // Create new bracket
-      const lastBracket = await Bracket.findOne({ event: registration.event }).sort({ bracketNumber: -1 })
+      const lastBracket = await Bracket.findOne({
+        event: registration.event,
+      }).sort({ bracketNumber: -1 })
       const nextBracketNumber = lastBracket ? lastBracket.bracketNumber + 1 : 1
 
       const newBracket = new Bracket({
@@ -485,23 +489,29 @@ const autoAssignToBracket = async (registration) => {
         divisionTitle: generateDivisionTitle(registration),
         maxCompetitors: 4,
         status: 'Open',
-        bracketCriteria: generateBracketCriteria(registration),
+        bracketCriteria: generateBracketCriteria(registration.skillLevel),
         ageClass: ageGroup,
-        sport: registration.ruleStyle,
-        ruleStyle: registration.ruleStyle,
-        weightClass: registration.weightClass ? {
-          min: 0, // You may want to define weight ranges
-          max: 999
-        } : undefined,
-        fighters: [{
-          fighter: registration._id,
-          seed: 1
-        }]
+        sport: event.sportType,
+        ruleStyle: 'Standard Single Elimination',
+        weightClass: registration.weightClass
+          ? {
+              min: 0, // You may want to define weight ranges
+              max: 999,
+            }
+          : undefined,
+        fighters: [
+          {
+            fighter: registration._id,
+            seed: 1,
+          },
+        ],
       })
 
       await newBracket.save()
 
-      console.log(`New bracket ${nextBracketNumber} created for fighter ${registration.firstName} ${registration.lastName} as seed 1`)
+      console.log(
+        `New bracket ${nextBracketNumber} created for fighter ${registration.firstName} ${registration.lastName} as seed 1`
+      )
     }
   } catch (error) {
     console.error('Error in auto-assigning fighter to bracket:', error)
