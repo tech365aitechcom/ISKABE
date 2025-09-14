@@ -68,17 +68,14 @@ exports.getDashboardData = async (req, res) => {
       startDate: { $gte: today, $lt: tomorrow },
     })
 
-    // 4. Total Revenue (filtered)
+    // 4. Total Revenue
     const totalRevenueData = await SpectatorTicketPurchase.aggregate([
-      { $match: { createdAt: { $gte: start, $lte: end } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } },
     ])
     const totalRevenue = totalRevenueData[0]?.total || 0
 
-    // 5. Total Tickets Sold (filtered)
-    const totalTickets = await SpectatorTicketPurchase.countDocuments({
-      createdAt: { $gte: start, $lte: end },
-    })
+    // 5. Total Tickets Sold
+    const totalTickets = await SpectatorTicketPurchase.countDocuments()
 
     // 6. Total Venues
     const totalVenues = await Venue.countDocuments()

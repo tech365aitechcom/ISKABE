@@ -51,6 +51,9 @@ const boutSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    startTime: {
+      type: Date,
+    },
   },
   { timestamps: true }
 )
