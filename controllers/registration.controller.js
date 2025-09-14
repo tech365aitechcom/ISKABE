@@ -227,6 +227,7 @@ exports.getRegistrationsByEventId = async (req, res) => {
         'createdBy',
         '-password -verificationToken -verificationTokenExpiry -resetToken -resetTokenExpiry -__v'
       )
+      .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
 
