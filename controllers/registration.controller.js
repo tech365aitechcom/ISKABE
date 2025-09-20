@@ -420,7 +420,8 @@ const generateBracketCriteria = (skillLevel) => {
 const generateDivisionTitle = (fighter) => {
   const parts = []
 
-  if (fighter.gender) parts.push(fighter.gender)
+  if (fighter.gender)
+    parts.push(fighter.gender === 'Male' ? "Men's" : "Women's")
   if (fighter.skillLevel) {
     parts.push(generateBracketCriteria(fighter.skillLevel))
   }
@@ -432,28 +433,38 @@ const generateDivisionTitle = (fighter) => {
 // Auto-assign fighter to bracket
 const autoAssignToBracket = async (registration) => {
   try {
+    console.log({ registration })
     const ageGroup = getAgeGroup(registration.dateOfBirth)
 
     // Fetch the event to get sport information
     const event = await Event.findById(registration.event)
 
     // Find matching brackets that are still open and have space
-    const matchingBrackets = await Bracket.find({
-      event: registration.event,
-      status: 'Open',
-      $expr: { $lt: [{ $size: '$fighters' }, 4] }, // Less than 4 fighters
-      // Match criteria
-      ...(registration.gender && {
-        bracketCriteria: { $regex: registration.gender, $options: 'i' },
-      }),
-      bracketCriteria: { $regex: ageGroup, $options: 'i' },
-      ...(registration.weightClass && {
-        bracketCriteria: { $regex: registration.weightClass, $options: 'i' },
-      }),
-      ...(registration.ruleStyle && {
-        bracketCriteria: { $regex: registration.ruleStyle, $options: 'i' },
-      }),
-    }).sort({ 'fighters.length': -1 }) // Prioritize brackets with more fighters
+    const matchingBrackets = await Bracket.aggregate([
+      {
+        $match: {
+          event: new mongoose.Types.ObjectId(registration.event),
+          status: 'Open',
+          ageClass: ageGroup,
+          sport: `${event.sportType} (${registration.gender})`,
+          ruleStyle: 'Standard Single Elimination',
+          bracketCriteria: generateBracketCriteria(registration.skillLevel),
+        },
+      },
+      {
+        $addFields: {
+          fighterCount: { $size: '$fighters' },
+        },
+      },
+      {
+        $match: {
+          $expr: { $lt: ['$fighterCount', '$maxCompetitors'] },
+        },
+      },
+      {
+        $sort: { fighterCount: -1 }, // prioritize brackets with more fighters
+      },
+    ])
 
     let targetBracket = null
 
@@ -491,8 +502,9 @@ const autoAssignToBracket = async (registration) => {
         status: 'Open',
         bracketCriteria: generateBracketCriteria(registration.skillLevel),
         ageClass: ageGroup,
-        sport: event.sportType,
+        sport: `${event.sportType} (${registration.gender})`,
         ruleStyle: 'Standard Single Elimination',
+        weightClassGroup: registration.weightClass,
         weightClass: registration.weightClass
           ? {
               min: 0, // You may want to define weight ranges

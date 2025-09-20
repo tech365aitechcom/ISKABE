@@ -65,8 +65,9 @@ const bracketSchema = new mongoose.Schema(
     },
     ageClass: String,
     sport: String,
-    ruleStyle: String, // e.g., "Muay Thai", "Point Sparring"
+    ruleStyle: String,
     ring: Number,
+    weightClassGroup: String,
     weightClass: {
       min: Number,
       max: Number,
