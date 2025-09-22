@@ -1,4 +1,5 @@
 const TrainingFacility = require('../models/trainingFacility.model')
+const { roles } = require('../constant/index')
 
 exports.createTrainingFacility = async (req, res) => {
   try {
@@ -18,7 +19,7 @@ exports.createTrainingFacility = async (req, res) => {
 
 exports.getAllFacilities = async (req, res) => {
   try {
-    const { id: userId } = req.user
+    const { id: userId, role } = req.user
 
     const {
       page = 1,
@@ -54,6 +55,20 @@ exports.getAllFacilities = async (req, res) => {
         { adminApproveStatus: 'Approved' },
         { isDraft: true, createdBy: userId },
       ]
+    }
+
+    // If user is not a superAdmin, modify filter to include facilities created by them
+    if (role !== roles.superAdmin) {
+      if (filter.$or) {
+        // If $or already exists, add the user's facilities to it
+        filter.$or.push({ createdBy: userId })
+      } else {
+        // Create new $or condition to include both approved facilities and user's own facilities
+        filter.$or = [
+          { adminApproveStatus: 'Approved' },
+          { createdBy: userId }
+        ]
+      }
     }
 
     const total = await TrainingFacility.countDocuments(filter)

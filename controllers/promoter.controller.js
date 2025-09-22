@@ -116,13 +116,18 @@ exports.createPromoter = async (req, res) => {
     })
   } catch (error) {
     if (error.code === 11000) {
-      const duplicateField = Object.keys(error.keyPattern || {})[0]
+      const duplicateFields = Object.keys(error.keyPattern || {})
 
       let message = 'Duplicate value detected.'
-      if (duplicateField === 'email') {
-        message = 'Email already exists.'
-      } else if (duplicateField === 'name') {
+      if (
+        duplicateFields.includes('name') &&
+        duplicateFields.includes('email')
+      ) {
+        message = 'Promoter with same name and Email already exists.'
+      } else if (duplicateFields.includes('name')) {
         message = 'Promoter with same name already exists.'
+      } else if (duplicateFields.includes('email')) {
+        message = 'Email already exists.'
       }
 
       return res.status(400).json({

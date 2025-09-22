@@ -19,7 +19,7 @@ const generateVerificationToken = () => {
 const checkSuspensionStatus = async (userId) => {
   const activeSuspensions = await Suspension.find({
     person: userId,
-    status: 'Active'
+    status: 'Active',
   }).populate('sportingEventUID')
 
   if (activeSuspensions.length === 0) {
@@ -31,7 +31,7 @@ const checkSuspensionStatus = async (userId) => {
   const currentDate = new Date()
   const expiredSuspensions = []
   let hasActiveSuspension = false
-  
+
   for (const suspension of activeSuspensions) {
     let suspensionExpired = false
 
@@ -43,7 +43,7 @@ const checkSuspensionStatus = async (userId) => {
         type: 'indefinite',
         reason: suspension.type,
         message: `Your account is indefinitely suspended due to ${suspension.type.toLowerCase()} reasons. Please contact support.`,
-        suspensionDetails: suspension
+        suspensionDetails: suspension,
       }
     }
 
@@ -54,14 +54,18 @@ const checkSuspensionStatus = async (userId) => {
         isSuspended: true,
         type: 'medical',
         reason: 'Medical clearance required',
-        message: 'Your account is suspended pending medical clearance. Please submit required medical documentation.',
-        suspensionDetails: suspension
+        message:
+          'Your account is suspended pending medical clearance. Please submit required medical documentation.',
+        suspensionDetails: suspension,
       }
     }
 
     // Check days without training
     if (suspension.daysWithoutTraining) {
-      const daysSinceIncident = Math.floor((currentDate - new Date(suspension.incidentDate)) / (1000 * 60 * 60 * 24))
+      const daysSinceIncident = Math.floor(
+        (currentDate - new Date(suspension.incidentDate)) /
+          (1000 * 60 * 60 * 24)
+      )
       if (daysSinceIncident < suspension.daysWithoutTraining) {
         hasActiveSuspension = true
         const remainingDays = suspension.daysWithoutTraining - daysSinceIncident
@@ -69,9 +73,12 @@ const checkSuspensionStatus = async (userId) => {
           isSuspended: true,
           type: 'training',
           reason: 'Training suspension active',
-          message: `You are suspended from training for ${remainingDays} more days (until ${new Date(new Date(suspension.incidentDate).getTime() + suspension.daysWithoutTraining * 24 * 60 * 60 * 1000).toLocaleDateString()}).`,
+          message: `You are suspended from training for ${remainingDays} more days (until ${new Date(
+            new Date(suspension.incidentDate).getTime() +
+              suspension.daysWithoutTraining * 24 * 60 * 60 * 1000
+          ).toLocaleDateString()}).`,
           suspensionDetails: suspension,
-          remainingDays
+          remainingDays,
         }
       } else {
         suspensionExpired = true
@@ -80,7 +87,10 @@ const checkSuspensionStatus = async (userId) => {
 
     // Check days before competing
     if (suspension.daysBeforeCompeting) {
-      const daysSinceIncident = Math.floor((currentDate - new Date(suspension.incidentDate)) / (1000 * 60 * 60 * 24))
+      const daysSinceIncident = Math.floor(
+        (currentDate - new Date(suspension.incidentDate)) /
+          (1000 * 60 * 60 * 24)
+      )
       if (daysSinceIncident < suspension.daysBeforeCompeting) {
         hasActiveSuspension = true
         const remainingDays = suspension.daysBeforeCompeting - daysSinceIncident
@@ -88,9 +98,12 @@ const checkSuspensionStatus = async (userId) => {
           isSuspended: true,
           type: 'competition',
           reason: 'Competition suspension active',
-          message: `You are suspended from competing for ${remainingDays} more days (until ${new Date(new Date(suspension.incidentDate).getTime() + suspension.daysBeforeCompeting * 24 * 60 * 60 * 1000).toLocaleDateString()}).`,
+          message: `You are suspended from competing for ${remainingDays} more days (until ${new Date(
+            new Date(suspension.incidentDate).getTime() +
+              suspension.daysBeforeCompeting * 24 * 60 * 60 * 1000
+          ).toLocaleDateString()}).`,
           suspensionDetails: suspension,
-          remainingDays
+          remainingDays,
         }
       } else {
         suspensionExpired = true
@@ -145,12 +158,10 @@ exports.signup = async (req, res) => {
     const existingUser = await User.findOne({ email })
     if (existingUser) {
       if (existingUser.isSuspended) {
-        return res
-          .status(403)
-          .json({
-            message:
-              'This account has been suspended. You cannot register again with this email.',
-          })
+        return res.status(403).json({
+          message:
+            'This account has been suspended. You cannot register again with this email.',
+        })
       }
       return res.status(409).json({ message: 'Email already exists' })
     }
@@ -221,15 +232,17 @@ exports.login = async (req, res) => {
         message: suspensionCheck.message,
         suspensionType: suspensionCheck.type,
         reason: suspensionCheck.reason,
-        ...(suspensionCheck.remainingDays && { remainingDays: suspensionCheck.remainingDays }),
+        ...(suspensionCheck.remainingDays && {
+          remainingDays: suspensionCheck.remainingDays,
+        }),
         suspensionDetails: {
           incidentDate: suspensionCheck.suspensionDetails.incidentDate,
           type: suspensionCheck.suspensionDetails.type,
           description: suspensionCheck.suspensionDetails.description,
-          ...(suspensionCheck.suspensionDetails.sportingEventUID && { 
-            event: suspensionCheck.suspensionDetails.sportingEventUID.name 
-          })
-        }
+          ...(suspensionCheck.suspensionDetails.sportingEventUID && {
+            event: suspensionCheck.suspensionDetails.sportingEventUID.name,
+          }),
+        },
       })
     }
 
@@ -286,22 +299,35 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'Email not registered' })
     }
 
-    // Rate limit: 15 minutes between reset requests
+    // Rate limit: Maximum 3 requests per hour
     const now = Date.now()
-    const recentRequestGap = 15 * 60 * 1000 // 15 minutes
+    const oneHour = 60 * 60 * 1000 // 1 hour in milliseconds
+    const maxRequestsPerHour = 3
 
+    // Check if we need to reset the counter (more than 1 hour has passed)
     if (
-      user.resetPasswordExpiry &&
-      user.resetPasswordExpiry - now > recentRequestGap
+      !user.resetRequestWindowStart ||
+      now - user.resetRequestWindowStart.getTime() >= oneHour
     ) {
-      const waitMinutes = Math.ceil((user.resetPasswordExpiry - now) / 60000)
+      user.resetRequestCount = 0
+      user.resetRequestWindowStart = new Date(now)
+    }
+
+    // Check if user has exceeded the limit
+    if (user.resetRequestCount >= maxRequestsPerHour) {
+      const timeRemaining =
+        oneHour - (now - user.resetRequestWindowStart.getTime())
+      const minutesRemaining = Math.ceil(timeRemaining / (60 * 1000))
+
       return res.status(429).json({
-        message: `Too many reset requests. Please wait ${waitMinutes} minutes before trying again.`,
+        message: `Too many reset requests. You can make ${maxRequestsPerHour} requests per hour. Please wait ${minutesRemaining} minutes before trying again.`,
       })
     }
 
     const resetToken = generateVerificationToken()
 
+    // Increment the request counter
+    user.resetRequestCount += 1
     user.resetPasswordToken = resetToken
     user.resetPasswordExpiry = now + config.resetTokenExpiry * 1000 // typically 1 hour
     await user.save()
@@ -337,6 +363,14 @@ exports.resetPassword = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ message: 'Invalid or expired reset token' })
+    }
+
+    // Check if new password is the same as current password
+    const isSameAsOld = await bcrypt.compare(newPassword, user.password)
+    if (isSameAsOld) {
+      return res.status(400).json({
+        message: 'You cannot use your previous password as the new password.',
+      })
     }
 
     user.password = newPassword
@@ -534,15 +568,15 @@ exports.updateUserById = async (req, res) => {
 
     // Handle validation errors
     if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map(err => ({
+      const validationErrors = Object.values(error.errors).map((err) => ({
         field: err.path,
-        message: err.message
+        message: err.message,
       }))
 
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
-        errors: validationErrors
+        errors: validationErrors,
       })
     }
 
@@ -684,29 +718,30 @@ exports.getFighterSystemRecord = async (req, res) => {
 }
 
 exports.refreshToken = async (req, res) => {
-  const token = req.headers.authorization && req.headers.authorization.split(' ')[1]
+  const token =
+    req.headers.authorization && req.headers.authorization.split(' ')[1]
 
   if (!token) {
-    return res.status(401).json({ 
-      success: false, 
+    return res.status(401).json({
+      success: false,
       message: 'No token provided',
-      requiresLogin: true 
+      requiresLogin: true,
     })
   }
 
   try {
     const decoded = jwt.verify(token, config.jwtSecret)
-    
+
     // Find user to ensure they still exist and are not suspended
     const user = await User.findById(decoded.id).select(
       '-password -createdAt -updatedAt -__v -verificationToken -verificationTokenExpiry -resetPasswordToken -resetPasswordExpiry'
     )
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
+      return res.status(404).json({
+        success: false,
         message: 'User not found',
-        requiresLogin: true 
+        requiresLogin: true,
       })
     }
 
@@ -719,24 +754,26 @@ exports.refreshToken = async (req, res) => {
         suspensionType: suspensionCheck.type,
         reason: suspensionCheck.reason,
         requiresLogin: true,
-        ...(suspensionCheck.remainingDays && { remainingDays: suspensionCheck.remainingDays })
+        ...(suspensionCheck.remainingDays && {
+          remainingDays: suspensionCheck.remainingDays,
+        }),
       })
     }
 
     // Legacy suspension check (fallback)
     if (user.isSuspended) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
         message: 'Your account has been suspended by the admin.',
-        requiresLogin: true 
+        requiresLogin: true,
       })
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
         message: 'Account not verified. Please check your email.',
-        requiresLogin: true 
+        requiresLogin: true,
       })
     }
 
@@ -749,32 +786,32 @@ exports.refreshToken = async (req, res) => {
 
     const userObj = user.toObject()
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
-      message: 'Token refreshed successfully', 
-      token: newToken, 
-      user: userObj 
+      message: 'Token refreshed successfully',
+      token: newToken,
+      user: userObj,
     })
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        success: false, 
+      return res.status(401).json({
+        success: false,
         message: 'Token expired',
-        requiresLogin: true 
+        requiresLogin: true,
       })
     } else if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ 
-        success: false, 
+      return res.status(401).json({
+        success: false,
         message: 'Invalid token',
-        requiresLogin: true 
+        requiresLogin: true,
       })
     }
-    
+
     console.error('Refresh token error:', error)
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: 'Something went wrong during token refresh',
-      requiresLogin: true 
+      requiresLogin: true,
     })
   }
 }

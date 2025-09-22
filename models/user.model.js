@@ -118,6 +118,8 @@ const userSchema = new mongoose.Schema(
     verificationTokenExpiry: Date,
     resetPasswordToken: String,
     resetPasswordExpiry: Date,
+    resetRequestCount: { type: Number, default: 0 },
+    resetRequestWindowStart: Date,
     communicationPreferences: {
       type: [String],
       default: [],

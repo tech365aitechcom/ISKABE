@@ -41,7 +41,12 @@ const suspensionSchema = new mongoose.Schema(
     description: {
       type: String,
       required: false,
-      minlength: 10,
+      validate: {
+        validator: function (v) {
+          return v === '' || v.length >= 10
+        },
+        message: 'Description must be at least 10 characters long or empty.',
+      },
     },
 
     daysWithoutTraining: {
