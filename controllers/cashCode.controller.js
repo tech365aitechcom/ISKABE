@@ -79,9 +79,11 @@ exports.requestCashCode = async (req, res) => {
     let user = null
     if (userId) {
       if (role === roles.fighter) {
+        console.log({ userId, role })
         const fighter = await User.findOne({
           _id: new mongoose.Types.ObjectId(userId),
         })
+        console.log({ fighter })
         if (!fighter)
           return res.status(404).json({ message: 'Fighter not found' })
         user = fighter
@@ -94,6 +96,9 @@ exports.requestCashCode = async (req, res) => {
             .status(404)
             .json({ success: false, message: 'Trainer not found' })
         user = trainer
+      } else {
+        user = await User.findById(userId)
+        if (!user) return res.status(404).json({ message: 'User not found' })
       }
 
       resolvedName = `${user.firstName} ${user.lastName}`
