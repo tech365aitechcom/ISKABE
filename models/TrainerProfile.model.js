@@ -11,6 +11,7 @@ const trainerProfileSchema = new mongoose.Schema(
     // Personal Info
     height: Number,
     weight: Number,
+    weightUnit: { type: String, default: 'kg' },
     // Gym Info
     gymName: String,
     gymLocation: String,

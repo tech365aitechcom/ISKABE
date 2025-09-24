@@ -136,6 +136,7 @@ exports.updateFighterProfileById = async (req, res) => {
     const fighterFields = [
       'height',
       'weight',
+      'weightUnit',
       'weightClass',
       'instagram',
       'youtube',

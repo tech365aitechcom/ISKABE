@@ -10,6 +10,7 @@ const fighterProfileSchema = new mongoose.Schema(
     },
     height: String,
     weight: Number,
+    weightUnit: { type: String, default: 'kg' },
     weightClass: String,
 
     instagram: String,
