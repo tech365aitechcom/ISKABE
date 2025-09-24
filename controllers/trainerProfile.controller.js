@@ -56,6 +56,7 @@ exports.updateTrainerProfileById = async (req, res) => {
     const trainerFields = [
       'height',
       'weight',
+      'weightUnit',
       'gymName',
       'gymLocation',
       'yearsOfExperience',
