@@ -33,6 +33,7 @@ const boutRoutes = require('./routes/bout.route')
 const fightRoutes = require('./routes/fight.route')
 const cashCodeRoutes = require('./routes/cashCode.route')
 const dashboardRoutes = require('./routes/dashboard.route')
+const paymentRoutes = require('./routes/payment.route')
 
 app.use(cors())
 app.use(express.json())
@@ -66,6 +67,7 @@ app.use('/api/bouts', boutRoutes)
 app.use('/api/fights', fightRoutes)
 app.use('/api/cash-code', cashCodeRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/payment', paymentRoutes)
 
 // Define a test route
 app.get('/', (req, res) => {
