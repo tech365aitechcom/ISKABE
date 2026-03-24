@@ -1,6 +1,37 @@
+// Load environment variables first
+require('dotenv').config()
+
+// Import Sentry after loading env vars
+const Sentry = require('@sentry/node')
+const { nodeProfilingIntegration } = require('@sentry/profiling-node')
+
+// Initialize Sentry only if DSN is provided
+const isProduction = process.env.NODE_ENV === 'production'
+const sentryEnabled = !!process.env.SENTRY_DSN
+
+if (sentryEnabled) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+      nodeProfilingIntegration(),
+    ],
+    // Performance Monitoring
+    // In production, reduce to 10% to save resources and costs
+    tracesSampleRate: isProduction ? 0.1 : 1.0,
+    // Profiling
+    // In production, reduce to 10% to save resources and costs
+    profilesSampleRate: isProduction ? 0.1 : 1.0,
+    environment: process.env.NODE_ENV || 'development',
+  })
+
+  console.log('✓ Sentry initialized successfully')
+} else {
+  console.log('⚠ Sentry DSN not found - error tracking disabled')
+}
+
 const express = require('express')
 const app = express()
-require('dotenv').config()
+
 const connectDB = require('./config/db')
 const cors = require('cors')
 const bodyParser = require('body-parser')
@@ -73,6 +104,47 @@ app.use('/api/payment', paymentRoutes)
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Server is working properly!' })
 })
+
+// Sentry test routes - Only enabled in development and when Sentry is configured
+if (process.env.NODE_ENV !== 'production' && sentryEnabled) {
+  app.get('/api/test-sentry/error', (req, res) => {
+    throw new Error('Test error from Express server - Sentry should capture this!')
+  })
+
+  app.get('/api/test-sentry/message', (req, res) => {
+    Sentry.captureMessage('Test message from Express server', {
+      level: 'info',
+      tags: {
+        test: 'manual-message',
+        source: 'express-server',
+      },
+    })
+    res.status(200).json({ message: 'Test message sent to Sentry!' })
+  })
+
+  app.get('/api/test-sentry/exception', (req, res) => {
+    try {
+      throw new Error('Test captured exception from Express server')
+    } catch (error) {
+      Sentry.captureException(error, {
+        tags: {
+          test: 'captured-exception',
+          source: 'express-server',
+        },
+        extra: {
+          timestamp: new Date().toISOString(),
+          endpoint: '/api/test-sentry/exception',
+        },
+      })
+      res.status(200).json({ message: 'Test exception sent to Sentry!' })
+    }
+  })
+}
+
+// Setup Sentry error handler - must be after all routes but before any other error middleware
+if (sentryEnabled) {
+  Sentry.setupExpressErrorHandler(app)
+}
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
