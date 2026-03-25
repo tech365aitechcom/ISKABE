@@ -1,25 +1,20 @@
 const mongoose = require('mongoose')
 
-const squareSchema = new mongoose.Schema(
+const stripeSchema = new mongoose.Schema(
   {
     transactionId: {
       type: String,
       required: true,
     },
-    receiptNumber: {
+    currency: {
       type: String,
-      required: true,
     },
-    orderId: {
+    cardBrand: {
       type: String,
-      required: true,
     },
     last4: {
       type: String,
       required: true,
-    },
-    receiptUrl: {
-      type: String,
     },
   },
   { _id: false }
@@ -99,7 +94,7 @@ const registrationSchema = new mongoose.Schema(
       type: String,
       enum: ['cash', 'card'],
     },
-    squareDetails: squareSchema,
+    stripeDetails: stripeSchema,
     paymentNotes: {
       type: String,
     },
@@ -130,7 +125,7 @@ const registrationSchema = new mongoose.Schema(
       enum: ['Pending', 'Rejected', 'Verified'],
       default: 'Pending',
     },
-    
+
     // Weigh-in Info
     weighInDate: {
       type: Date,
@@ -139,14 +134,14 @@ const registrationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    
+
     // Check-in Status
     checkInStatus: {
       type: String,
       enum: ['Checked In', 'Not Checked', 'No Show'],
       default: 'Not Checked',
     },
-    
+
     // Medical & Compliance
     medicalExamDone: {
       type: Boolean,
@@ -166,7 +161,7 @@ const registrationSchema = new mongoose.Schema(
       enum: ['None', 'Warning', 'Flagged'],
       default: 'None',
     },
-    
+
     // Emergency & Safety (NEW REQUIRED FIELDS)
     emergencyContactName: {
       type: String,
@@ -174,12 +169,12 @@ const registrationSchema = new mongoose.Schema(
     emergencyContactPhone: {
       type: String,
     },
-    
+
     // Regulatory (NEW REQUIRED FIELDS)
     countryOfOrigin: {
       type: String,
     },
-    
+
     // Experience
     lastEvent: {
       type: String,
@@ -187,7 +182,7 @@ const registrationSchema = new mongoose.Schema(
     skillRank: {
       type: String,
     },
-    
+
     // Legal
     parentalConsentUploaded: {
       type: Boolean,

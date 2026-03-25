@@ -23,26 +23,21 @@ const redemptionLogSchema = new mongoose.Schema(
   { _id: false }
 )
 
-const squareSchema = new mongoose.Schema(
+const stripeSchema = new mongoose.Schema(
   {
     transactionId: {
       type: String,
       required: true,
     },
-    receiptNumber: {
+    currency: {
       type: String,
-      required: true,
     },
-    orderId: {
+    cardBrand: {
       type: String,
-      required: true,
     },
     last4: {
       type: String,
       required: true,
-    },
-    receiptUrl: {
-      type: String,
     },
   },
   { _id: false }
@@ -63,21 +58,23 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
     tier: {
       type: String,
     },
-    tiers: [{
-      tierName: {
-        type: String,
-        required: true,
+    tiers: [
+      {
+        tierName: {
+          type: String,
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+        },
+        price: {
+          type: Number,
+          required: true,
+        },
       },
-      quantity: {
-        type: Number,
-        required: true,
-        min: 1,
-      },
-      price: {
-        type: Number,
-        required: true,
-      }
-    }],
+    ],
     quantity: {
       type: Number,
       required: true,
@@ -118,7 +115,7 @@ const spectatorTicketPurchaseSchema = new mongoose.Schema(
       ref: 'CashCode',
       default: null,
     },
-    squareDetails: squareSchema,
+    stripeDetails: stripeSchema,
     qrCode: {
       type: String,
     },
