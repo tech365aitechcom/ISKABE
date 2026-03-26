@@ -17,8 +17,18 @@ exports.createHomePageConfig = async (req, res) => {
         message: 'Settings already exist. Please update the existing settings.',
       })
     }
+
+    // Clean up empty strings to prevent ObjectId casting errors
+    const cleanedData = { ...req.body }
+    if (cleanedData.featuredResult === '') {
+      cleanedData.featuredResult = null
+    }
+    if (cleanedData.latestNews === '') {
+      cleanedData.latestNews = null
+    }
+
     const settings = new HomepageConfig({
-      ...req.body,
+      ...cleanedData,
       createdBy: userId,
     })
 
@@ -103,7 +113,18 @@ exports.getNavbarConfig = async (req, res) => {
 
 exports.updateHomePageConfig = async (req, res) => {
   try {
-    const settings = await HomepageConfig.findOneAndUpdate({}, req.body, {
+    // Clean up empty strings to prevent ObjectId casting errors
+    const cleanedData = { ...req.body }
+
+    // Convert empty strings to null for ObjectId fields
+    if (cleanedData.featuredResult === '') {
+      cleanedData.featuredResult = null
+    }
+    if (cleanedData.latestNews === '') {
+      cleanedData.latestNews = null
+    }
+
+    const settings = await HomepageConfig.findOneAndUpdate({}, cleanedData, {
       new: true,
       upsert: true,
     })
