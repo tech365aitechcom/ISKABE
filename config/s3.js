@@ -7,6 +7,14 @@ const s3Bucket = new S3({
   accessKeyId: process.env.S3_ACCESS_KEY,
   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   region: process.env.S3_AWS_REGION,
+  signatureVersion: 'v4',
+})
+
+console.log('S3 Client Configuration:', {
+  region: process.env.S3_AWS_REGION,
+  bucket: process.env.S3_BUCKET_NAME,
+  hasAccessKey: !!process.env.S3_ACCESS_KEY,
+  hasSecretKey: !!process.env.S3_SECRET_ACCESS_KEY,
 })
 
 const uploadS3 = async (file) => {
@@ -51,6 +59,12 @@ const uploadS3 = async (file) => {
       Body: fileBuffer,
     }
 
+    console.log('S3 Upload Params:', {
+      bucket: process.env.S3_BUCKET_NAME,
+      region: process.env.S3_AWS_REGION,
+      fileName: file.originalname,
+    })
+
     return new Promise((resolve, reject) => {
       s3Bucket.upload(params, (err, data) => {
         if (err) {
@@ -58,7 +72,15 @@ const uploadS3 = async (file) => {
           return reject(err.message)
         }
         console.log('S3 Upload Success:', data)
-        return resolve(data.Location)
+
+        // Generate a signed URL that expires in 7 days (you can adjust this)
+        const signedUrl = s3Bucket.getSignedUrl('getObject', {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: file.originalname,
+          Expires: 60 * 60 * 24 * 7, // 7 days in seconds
+        })
+
+        return resolve(signedUrl)
       })
     })
   } catch (err) {

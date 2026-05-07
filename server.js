@@ -12,9 +12,7 @@ const sentryEnabled = !!process.env.SENTRY_DSN
 if (sentryEnabled) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    integrations: [
-      nodeProfilingIntegration(),
-    ],
+    integrations: [nodeProfilingIntegration()],
     // Performance Monitoring
     // In production, reduce to 10% to save resources and costs
     tracesSampleRate: isProduction ? 0.1 : 1.0,
@@ -108,7 +106,9 @@ app.get('/', (req, res) => {
 // Sentry test routes - Only enabled in development and when Sentry is configured
 if (process.env.NODE_ENV !== 'production' && sentryEnabled) {
   app.get('/api/test-sentry/error', (req, res) => {
-    throw new Error('Test error from Express server - Sentry should capture this!')
+    throw new Error(
+      'Test error from Express server - Sentry should capture this!',
+    )
   })
 
   app.get('/api/test-sentry/message', (req, res) => {
@@ -151,6 +151,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const fileUrl = await uploadS3(req.file)
     res.json({ success: true, url: fileUrl })
   } catch (err) {
+    console.log(err)
     res.status(500).json({ success: false, error: err.message })
   }
 })
@@ -161,22 +162,25 @@ connectDB()
 
 // Simple scheduler for suspension cleanup (runs every hour)
 const runSuspensionCleanup = () => {
-  setInterval(async () => {
-    try {
-      await SuspensionService.runCleanupJob()
-    } catch (error) {
-      console.error('Scheduled suspension cleanup failed:', error)
-    }
-  }, 60 * 60 * 1000) // Run every hour
+  setInterval(
+    async () => {
+      try {
+        await SuspensionService.runCleanupJob()
+      } catch (error) {
+        console.error('Scheduled suspension cleanup failed:', error)
+      }
+    },
+    60 * 60 * 1000,
+  ) // Run every hour
 }
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
-  
+
   // Start suspension cleanup scheduler
   runSuspensionCleanup()
   console.log('Suspension cleanup scheduler started (runs every hour)')
-  
+
   // Run initial cleanup
   setTimeout(async () => {
     try {
