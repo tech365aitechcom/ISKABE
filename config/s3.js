@@ -57,6 +57,7 @@ const uploadS3 = async (file) => {
       ContentType: file.mimetype,
       Key: file.originalname, // You can customize this to avoid overwrites
       Body: fileBuffer,
+      ACL: 'public-read', // Make the file publicly accessible
     }
 
     console.log('S3 Upload Params:', {
@@ -73,14 +74,8 @@ const uploadS3 = async (file) => {
         }
         console.log('S3 Upload Success:', data)
 
-        // Generate a signed URL that expires in 7 days (you can adjust this)
-        const signedUrl = s3Bucket.getSignedUrl('getObject', {
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: file.originalname,
-          Expires: 60 * 60 * 24 * 7, // 7 days in seconds
-        })
-
-        return resolve(signedUrl)
+        // Return the public URL (no expiration)
+        return resolve(data.Location)
       })
     })
   } catch (err) {
