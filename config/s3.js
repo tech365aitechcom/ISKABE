@@ -1,13 +1,21 @@
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
-const sharp = require('sharp')
 const multer = require('multer')
-const path = require('path')
 const crypto = require('crypto')
 require('dotenv').config()
 
-// Bound libvips worker usage so concurrent uploads cannot consume every core.
-sharp.concurrency(Math.max(1, Number(process.env.SHARP_CONCURRENCY) || 2))
-sharp.cache({ memory: 50, files: 20, items: 100 })
+// Sharp's native Linux binary requires SSE4.2 on recent releases. Some VPS
+// hypervisors expose older x86-64 CPUs, so image optimisation must not prevent
+// the whole API from starting. File signatures are still validated below.
+let sharp = null
+try {
+  sharp = require('sharp')
+  sharp.concurrency(Math.max(1, Number(process.env.SHARP_CONCURRENCY) || 2))
+  sharp.cache({ memory: 50, files: 20, items: 100 })
+} catch (error) {
+  console.warn(
+    `Sharp is unavailable; validated images will be uploaded without resizing: ${error.message.split('\n')[0]}`
+  )
+}
 
 const s3Bucket = new S3Client({
   region: process.env.S3_AWS_REGION,
@@ -16,6 +24,45 @@ const s3Bucket = new S3Client({
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   },
 })
+
+const hasBytes = (buffer, bytes, offset = 0) =>
+  bytes.every((byte, index) => buffer[offset + index] === byte)
+
+const detectMimeType = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) return null
+
+  if (hasBytes(buffer, [0xff, 0xd8, 0xff])) return 'image/jpeg'
+  if (hasBytes(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+    return 'image/png'
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 0, 4) === 'RIFF' &&
+    buffer.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return 'image/webp'
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.toString('ascii', 4, 8) === 'ftyp' &&
+    ['avif', 'avis'].includes(buffer.toString('ascii', 8, 12))
+  ) {
+    return 'image/avif'
+  }
+  if (buffer.length >= 5 && buffer.toString('ascii', 0, 5) === '%PDF-') {
+    return 'application/pdf'
+  }
+
+  return null
+}
+
+const extensionByMimeType = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/avif': '.avif',
+  'application/pdf': '.pdf',
+}
 
 console.log('S3 Client Configuration:', {
   region: process.env.S3_AWS_REGION,
@@ -35,7 +82,6 @@ const uploadS3 = async (file) => {
       'image/png',
       'image/webp',
       'image/avif',
-      'image/tiff',
     ]
     const isImage = imageTypes.includes(file.mimetype)
     const isPDF = file.mimetype === 'application/pdf'
@@ -44,9 +90,14 @@ const uploadS3 = async (file) => {
       throw new Error(`Unsupported file type: ${file.mimetype}`)
     }
 
-    let fileBuffer
+    const detectedMimeType = detectMimeType(file.buffer)
+    if (detectedMimeType !== file.mimetype) {
+      throw new Error('File content does not match its declared type')
+    }
 
-    if (isImage) {
+    let fileBuffer = file.buffer
+
+    if (isImage && sharp) {
       // Resize image
       try {
         fileBuffer = await sharp(file.buffer, {
@@ -59,15 +110,12 @@ const uploadS3 = async (file) => {
       } catch (err) {
         throw new Error(`Invalid or unsafe image: ${err.message}`)
       }
-    } else {
-      // No processing needed for PDFs
-      fileBuffer = file.buffer
     }
 
     const params = {
       Bucket: process.env.S3_BUCKET_NAME,
       ContentType: file.mimetype,
-      Key: `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`,
+      Key: `${crypto.randomUUID()}${extensionByMimeType[detectedMimeType]}`,
       Body: fileBuffer,
       ACL: 'public-read', // Make the file publicly accessible
     }
@@ -93,7 +141,6 @@ const allowedTypes = new Set([
   'image/png',
   'image/webp',
   'image/avif',
-  'image/tiff',
   'application/pdf',
 ])
 
