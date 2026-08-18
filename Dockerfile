@@ -1,12 +1,14 @@
-FROM node:20
+FROM node:20-alpine
 
 WORKDIR /app
+ENV NODE_ENV=production
 
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci --omit=dev
 
-COPY . .
+COPY --chown=node:node . .
 
-CMD ["npm","run","start"]
+USER node
 EXPOSE 5000
+CMD ["node", "server.js"]

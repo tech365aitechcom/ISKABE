@@ -3,7 +3,6 @@ require('dotenv').config()
 
 // Import Sentry after loading env vars
 const Sentry = require('@sentry/node')
-const { nodeProfilingIntegration } = require('@sentry/profiling-node')
 
 // Initialize Sentry only if DSN is provided
 const isProduction = process.env.NODE_ENV === 'production'
@@ -12,13 +11,9 @@ const sentryEnabled = !!process.env.SENTRY_DSN
 if (sentryEnabled) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    integrations: [nodeProfilingIntegration()],
     // Performance Monitoring
     // In production, reduce to 10% to save resources and costs
     tracesSampleRate: isProduction ? 0.1 : 1.0,
-    // Profiling
-    // In production, reduce to 10% to save resources and costs
-    profilesSampleRate: isProduction ? 0.1 : 1.0,
     environment: process.env.NODE_ENV || 'development',
   })
 
@@ -35,6 +30,8 @@ const cors = require('cors')
 const bodyParser = require('body-parser')
 const { uploadS3, upload } = require('./config/s3')
 const SuspensionService = require('./services/suspension.service')
+const { protect } = require('./middlewares/auth.middleware')
+const { rateLimit } = require('./middlewares/rateLimit.middleware')
 
 const masterRoutes = require('./routes/master.route')
 const userRoutes = require('./routes/user.route')
@@ -64,10 +61,55 @@ const cashCodeRoutes = require('./routes/cashCode.route')
 const dashboardRoutes = require('./routes/dashboard.route')
 const paymentRoutes = require('./routes/payment.route')
 
-app.use(cors())
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1)
+}
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+      callback(new Error('Origin is not allowed by CORS'))
+    },
+  })
+)
 app.use(express.json())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+app.use(
+  '/api',
+  rateLimit({ windowMs: 60 * 1000, max: 300, name: 'global-api' })
+)
+app.use('/api', (req, res, next) => {
+  for (const [key, value] of Object.entries(req.query || {})) {
+    const values = Array.isArray(value) ? value : [value]
+    for (const item of values) {
+      if (typeof item === 'string' && item.length > 200) {
+        return res.status(400).json({
+          success: false,
+          message: `Query parameter '${key}' is too long.`,
+        })
+      }
+    }
+  }
+
+  const search = req.query?.search
+  if (typeof search === 'string' && /[\\^$*+?()[\]{}|]/.test(search)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Search contains unsupported special characters.',
+    })
+  }
+
+  next()
+})
 
 // Routes
 app.use('/api/master', masterRoutes)
@@ -146,7 +188,12 @@ if (sentryEnabled) {
   Sentry.setupExpressErrorHandler(app)
 }
 
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post(
+  '/api/upload',
+  rateLimit({ windowMs: 10 * 60 * 1000, max: 10, name: 'upload' }),
+  protect,
+  upload.single('file'),
+  async (req, res) => {
   try {
     const fileUrl = await uploadS3(req.file)
     res.json({ success: true, url: fileUrl })
@@ -154,7 +201,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     console.log(err)
     res.status(500).json({ success: false, error: err.message })
   }
-})
+  }
+)
 
 const port = process.env.PORT || 3000
 
@@ -162,19 +210,29 @@ connectDB()
 
 // Simple scheduler for suspension cleanup (runs every hour)
 const runSuspensionCleanup = () => {
+  let cleanupRunning = false
+
   setInterval(
     async () => {
+      if (cleanupRunning) {
+        console.warn('Skipping suspension cleanup because the previous run is still active')
+        return
+      }
+
+      cleanupRunning = true
       try {
         await SuspensionService.runCleanupJob()
       } catch (error) {
         console.error('Scheduled suspension cleanup failed:', error)
+      } finally {
+        cleanupRunning = false
       }
     },
     60 * 60 * 1000,
   ) // Run every hour
 }
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
 
   // Start suspension cleanup scheduler
@@ -190,3 +248,7 @@ app.listen(port, () => {
     }
   }, 5000) // Wait 5 seconds after server start
 })
+
+server.requestTimeout = 30 * 1000
+server.headersTimeout = 15 * 1000
+server.keepAliveTimeout = 5 * 1000

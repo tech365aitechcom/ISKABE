@@ -43,3 +43,16 @@ exports.optionalAuth = async (req, res, next) => {
     next()
   }
 }
+
+exports.requireRoles = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to perform this action.',
+      })
+    }
+
+    next()
+  }
+}

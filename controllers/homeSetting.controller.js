@@ -88,7 +88,7 @@ exports.getHomePageConfig = async (req, res) => {
 
     res.json({
       success: true,
-      data: settings,
+      data: settings || {},
     })
   } catch (err) {
     res.status(500).json({ success: false, message: err.message })
@@ -104,7 +104,7 @@ exports.getNavbarConfig = async (req, res) => {
 
     res.json({
       success: true,
-      data: settings,
+      data: settings || {},
     })
   } catch (err) {
     res.status(500).json({ success: false, message: err.message })

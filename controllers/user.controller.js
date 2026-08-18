@@ -153,6 +153,28 @@ exports.signup = async (req, res) => {
     redirectUrl,
   } = req.body
 
+  const publicRoles = new Set(['user', 'parent', 'fighter', 'trainer', 'promoter'])
+  const requestedRole = role || 'user'
+
+  if (!publicRoles.has(requestedRole)) {
+    const configuredSecret = process.env.ADMIN_SIGNUP_SECRET
+    const providedSecret = req.get('x-admin-signup-secret')
+    const secretMatches =
+      configuredSecret &&
+      providedSecret &&
+      configuredSecret.length === providedSecret.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(configuredSecret),
+        Buffer.from(providedSecret)
+      )
+
+    if (requestedRole !== 'superAdmin' || !secretMatches) {
+      return res.status(403).json({
+        message: 'Privileged accounts cannot be created through public signup.',
+      })
+    }
+  }
+
   try {
     // Check if email already exists
     const existingUser = await User.findOne({ email })
@@ -182,7 +204,7 @@ exports.signup = async (req, res) => {
       firstName,
       lastName,
       email,
-      role,
+      role: requestedRole,
       password,
       dateOfBirth,
       country,
@@ -544,9 +566,58 @@ exports.getUserById = async (req, res) => {
 
 exports.updateUserById = async (req, res) => {
   try {
-    const updates = req.body
+    const requesterId = req.user.id
+    const requesterRole = req.user.role
+    const targetId = req.params.id
+    const isAdmin = requesterRole === 'superAdmin'
 
-    const user = await User.findByIdAndUpdate(req.params.id, updates, {
+    if (!isAdmin && requesterId !== targetId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only update your own profile.',
+      })
+    }
+
+    const selfServiceFields = new Set([
+      'profilePhoto',
+      'firstName',
+      'middleName',
+      'lastName',
+      'nickName',
+      'userName',
+      'suffix',
+      'gender',
+      'dateOfBirth',
+      'country',
+      'state',
+      'city',
+      'street1',
+      'street2',
+      'postalCode',
+      'phoneNumber',
+      'about',
+      'communicationPreferences',
+    ])
+    const adminFields = new Set([
+      ...selfServiceFields,
+      'role',
+      'isPremium',
+      'adminNotes',
+      'isSuspended',
+    ])
+    const allowedFields = isAdmin ? adminFields : selfServiceFields
+    const updates = Object.fromEntries(
+      Object.entries(req.body).filter(([field]) => allowedFields.has(field))
+    )
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No permitted fields were provided.',
+      })
+    }
+
+    const user = await User.findByIdAndUpdate(targetId, updates, {
       new: true,
       runValidators: true,
     }).select('-password -resetPasswordToken -resetPasswordExpire')
